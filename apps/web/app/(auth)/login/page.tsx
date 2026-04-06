@@ -94,7 +94,7 @@ function LoginPageContent() {
     redirectToCliCallback(cliCallback, token, cliState);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!email) {
       setError("Email is required");
@@ -181,7 +181,7 @@ function LoginPageContent() {
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -190,7 +190,7 @@ function LoginPageContent() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
+                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
               />
             </div>
             <div className="space-y-2">
@@ -201,21 +201,21 @@ function LoginPageContent() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
+                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
               />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button
-              type="submit"
               disabled={submitting}
               className="w-full"
               size="lg"
+              onClick={handleLogin}
             >
               {submitting ? "Signing in..." : "Sign in"}
             </Button>
-          </form>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">

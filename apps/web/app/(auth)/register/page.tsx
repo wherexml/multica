@@ -40,7 +40,7 @@ function RegisterPageContent() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError("Name is required");
@@ -85,7 +85,7 @@ function RegisterPageContent() {
           <CardDescription>Sign up for Multica</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -94,7 +94,6 @@ function RegisterPageContent() {
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -105,7 +104,6 @@ function RegisterPageContent() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -116,7 +114,6 @@ function RegisterPageContent() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -127,21 +124,21 @@ function RegisterPageContent() {
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required
+                onKeyDown={(e) => e.key === "Enter" && handleRegister(e)}
               />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button
-              type="submit"
               disabled={submitting}
               className="w-full"
               size="lg"
+              onClick={handleRegister}
             >
               {submitting ? "Creating account..." : "Sign up"}
             </Button>
-          </form>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
