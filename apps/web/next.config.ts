@@ -7,7 +7,8 @@ config({ path: resolve(__dirname, "../../.env") });
 
 // Client-side (NEXT_PUBLIC_): empty = use relative URLs (go through Next.js rewrites)
 // Server-side rewrites: use BACKEND_REWRITE_URL (Docker internal hostname)
-const remoteApiUrl = process.env.BACKEND_REWRITE_URL || "http://localhost:8080";
+const backendPort = process.env.PORT || "8080";
+const remoteApiUrl = process.env.BACKEND_REWRITE_URL || `http://localhost:${backendPort}`;
 
 const nextConfig: NextConfig = {
   output: "standalone",

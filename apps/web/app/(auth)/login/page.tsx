@@ -181,7 +181,7 @@ function LoginPageContent() {
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form id="login-form" onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -207,18 +207,17 @@ function LoginPageContent() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full"
+              size="lg"
+            >
+              {submitting ? "Signing in..." : "Sign in"}
+            </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button
-            type="submit"
-            form="login-form"
-            disabled={submitting}
-            className="w-full"
-            size="lg"
-          >
-            {submitting ? "Signing in..." : "Sign in"}
-          </Button>
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-primary underline-offset-4 hover:underline">

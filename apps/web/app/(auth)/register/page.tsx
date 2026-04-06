@@ -85,7 +85,7 @@ function RegisterPageContent() {
           <CardDescription>Sign up for Multica</CardDescription>
         </CardHeader>
         <CardContent>
-          <form id="register-form" onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -133,18 +133,17 @@ function RegisterPageContent() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full"
+              size="lg"
+            >
+              {submitting ? "Creating account..." : "Sign up"}
+            </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button
-            type="submit"
-            form="register-form"
-            disabled={submitting}
-            className="w-full"
-            size="lg"
-          >
-            {submitting ? "Creating account..." : "Sign up"}
-          </Button>
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
