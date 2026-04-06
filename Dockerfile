@@ -33,4 +33,5 @@ COPY server/migrations/ ./migrations/
 
 EXPOSE 8080
 
+CMD ["./server"]
 ENTRYPOINT ["./server"]

@@ -161,6 +161,109 @@ make setup-worktree     # Setup using .env.worktree
 make start-worktree     # Start using .env.worktree
 ```
 
+## Container Deployment
+
+Deploy via Docker Compose using `.env.container`:
+
+```bash
+./scripts/deploy-container.sh
+```
+
+**Service Ports (222XX range):**
+- PostgreSQL: `localhost:22200`
+- Backend API: `localhost:22201`
+- Frontend: `localhost:22202`
+
+**Authentication:**
+- Login: `admin@local` / `admin123`
+- Register: http://localhost:22202/register
+
+### API Rewrite Architecture (Critical)
+
+Next.js rewrites are executed **server-side** inside the Docker container. The browser never directly contacts the backend hostname.
+
+```
+Browser  →  /auth/login  (relative URL)
+Frontend container  →  rewrite  →  http://backend:8080/auth/login
+```
+
+**Environment variables:**
+- `NEXT_PUBLIC_API_URL` — used by browser (must be **empty** so browser uses relative URLs)
+- `BACKEND_REWRITE_URL` — used by Next.js server-side rewrites (Docker internal hostname: `http://backend:8080`)
+
+**Common mistake to avoid:** Setting `NEXT_PUBLIC_API_URL=http://backend:8080` — this bakes the Docker internal hostname into client-side JS, causing `ERR_NAME_NOT_RESOLVED` in browsers.
+
+### Container Deployment Operations
+
+```bash
+# Stop all services
+docker compose -f docker-compose.yml --env-file .env.container down
+
+# Restart services (no rebuild)
+docker compose -f docker-compose.yml --env-file .env.container up -d
+
+# Rebuild and redeploy (after code changes)
+docker compose -f docker-compose.yml --env-file .env.container build --no-cache
+docker compose -f docker-compose.yml --env-file .env.container up -d
+
+# View logs
+docker compose -f docker-compose.yml --env-file .env.container logs -f backend
+
+# Run database migrations manually
+docker compose -f docker-compose.yml --env-file .env.container --profile migrate run --rm migrate
+```
+
+### Daemon Setup
+
+The local daemon connects to the container-deployed backend. After a fresh deploy or container restart:
+
+```bash
+cd server
+
+# 1. Configure server URL (if not already set)
+go run ./cmd/multica config set server_url http://localhost:22201
+
+# 2. Authenticate (opens browser for OAuth)
+go run ./cmd/multica auth login
+
+# 3. Watch a workspace
+go run ./cmd/multica workspace watch <workspace-id>
+
+# 4. Start daemon
+go run ./cmd/multica daemon start
+
+# Check daemon status
+go run ./cmd/multica daemon status
+
+# View daemon logs
+tail -f ~/.multica/daemon.log
+```
+
+**Daemon config location:** `~/.multica/config.json`
+
+### Syncing with Upstream
+
+The upstream repository is `multica-ai/multica`. A one-time setup:
+
+```bash
+git remote add upstream https://github.com/multica-ai/multica
+```
+
+To pull and merge upstream changes:
+
+```bash
+git fetch upstream main
+git stash                              # stash local changes if any
+git merge upstream/main                # fast-forward merge
+git stash pop                          # restore local changes, resolve conflicts
+```
+
+If `pnpm-lock.yaml` has conflicts, reset to upstream and reinstall:
+```bash
+git checkout upstream/main -- pnpm-lock.yaml
+pnpm install --no-frozen-lockfile
+```
+
 ## Coding Rules
 
 - TypeScript strict mode is enabled; keep types explicit.

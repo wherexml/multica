@@ -449,7 +449,7 @@ function SkillDetail({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="h-8 text-sm"
-              placeholder="Description"
+              placeholder="Brief description"
             />
           </div>
         </div>

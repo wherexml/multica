@@ -3,14 +3,102 @@ name: multica
 services:
   postgres:
     image: pgvector/pgvector:pg17
+    container_name: multica-postgres
     environment:
-      POSTGRES_DB: multica
+      POSTGRES_DB: ${POSTGRES_DB:-multica}
       POSTGRES_USER: ${POSTGRES_USER:-multica}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-multica}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-41500}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-multica} -d ${POSTGRES_DB:-multica}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - multica-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+        COMMIT: ${COMMIT:-unknown}
+    container_name: multica-backend
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-multica}:${POSTGRES_PASSWORD:-multica}@postgres:5432/${POSTGRES_DB:-multica}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-41502}}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:${FRONTEND_PORT:-41502}}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@multica.ai}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:${FRONTEND_PORT:-41502}/auth/callback}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-us-west-2}
+      CLOUDFRONT_KEY_PAIR_ID: ${CLOUDFRONT_KEY_PAIR_ID:-}
+      CLOUDFRONT_PRIVATE_KEY_SECRET: ${CLOUDFRONT_PRIVATE_KEY_SECRET:-multica/cloudfront-signing-key}
+      CLOUDFRONT_PRIVATE_KEY: ${CLOUDFRONT_PRIVATE_KEY:-}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+    ports:
+      - "${BACKEND_PORT:-41501}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - multica-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        BACKEND_REWRITE_URL: ${BACKEND_REWRITE_URL:-http://backend:8080}
+    container_name: multica-frontend
+    environment:
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "${FRONTEND_PORT:-41502}:3000"
+    depends_on:
+      - backend
+    networks:
+      - multica-network
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multica-migrate
+    command: ["./migrate", "up"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-multica}:${POSTGRES_PASSWORD:-multica}@postgres:5432/${POSTGRES_DB:-multica}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - multica-network
+    profiles:
+      - migrate
 
 volumes:
   pgdata:
+
+networks:
+  multica-network:
+    driver: bridge
