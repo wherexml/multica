@@ -38,26 +38,20 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const createUserWithPassword = `-- name: CreateUserWithPassword :one
-INSERT INTO "user" (name, email, password_hash, avatar_url)
-VALUES ($1, $2, $3, $4)
+const createUserWithEmail = `-- name: CreateUserWithEmail :one
+INSERT INTO "user" (name, email, password_hash)
+VALUES ($1, $2, $3)
 RETURNING id, name, email, avatar_url, created_at, updated_at, password_hash
 `
 
-type CreateUserWithPasswordParams struct {
+type CreateUserWithEmailParams struct {
 	Name         string      `json:"name"`
 	Email        string      `json:"email"`
 	PasswordHash pgtype.Text `json:"password_hash"`
-	AvatarUrl    pgtype.Text `json:"avatar_url"`
 }
 
-func (q *Queries) CreateUserWithPassword(ctx context.Context, arg CreateUserWithPasswordParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUserWithPassword,
-		arg.Name,
-		arg.Email,
-		arg.PasswordHash,
-		arg.AvatarUrl,
-	)
+func (q *Queries) CreateUserWithEmail(ctx context.Context, arg CreateUserWithEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUserWithEmail, arg.Name, arg.Email, arg.PasswordHash)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -111,26 +105,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
-const getUserByEmailWithPassword = `-- name: GetUserByEmailWithPassword :one
-SELECT id, name, email, avatar_url, created_at, updated_at, password_hash FROM "user"
-WHERE email = $1
-`
-
-func (q *Queries) GetUserByEmailWithPassword(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmailWithPassword, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.PasswordHash,
-	)
-	return i, err
-}
-
 const updateUser = `-- name: UpdateUser :one
 UPDATE "user" SET
     name = COALESCE($2, name),
@@ -161,11 +135,10 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	return i, err
 }
 
-const updateUserPassword = `-- name: UpdateUserPassword :exec
-UPDATE "user" SET
-    password_hash = $2,
-    updated_at = now()
+const updateUserPassword = `-- name: UpdateUserPassword :one
+UPDATE "user" SET password_hash = $2, updated_at = now()
 WHERE id = $1
+RETURNING id, name, email, avatar_url, created_at, updated_at, password_hash
 `
 
 type UpdateUserPasswordParams struct {
@@ -173,7 +146,17 @@ type UpdateUserPasswordParams struct {
 	PasswordHash pgtype.Text `json:"password_hash"`
 }
 
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
-	return err
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordHash,
+	)
+	return i, err
 }

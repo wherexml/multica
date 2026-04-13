@@ -107,6 +107,8 @@ export function BoardView({
   doneTotal: doneTotalOverride,
   myIssuesScope,
   myIssuesFilter,
+  activeIssueId,
+  onOpenIssue,
 }: {
   issues: Issue[];
   allIssues: Issue[];
@@ -123,6 +125,8 @@ export function BoardView({
   /** When set, use the My Issues load-more hook instead of the workspace one. */
   myIssuesScope?: string;
   myIssuesFilter?: MyIssuesFilter;
+  activeIssueId?: string;
+  onOpenIssue?: (issueId: string) => void;
 }) {
   const sortBy = useViewStore((s) => s.sortBy);
   const sortDirection = useViewStore((s) => s.sortDirection);
@@ -294,6 +298,8 @@ export function BoardView({
             issueMap={issueMapRef.current}
             childProgressMap={childProgressMap}
             totalCount={status === "done" ? displayDoneTotal : undefined}
+            activeIssueId={activeIssueId}
+            onOpenIssue={onOpenIssue}
             footer={
               status === "done" && hasMore ? (
                 <InfiniteScrollSentinel onVisible={loadMore} loading={loadingMore} />

@@ -48,6 +48,78 @@ export interface ListIssuesResponse {
   doneTotal?: number;
 }
 
+export interface DecisionCase {
+  id: string;
+  title: string;
+  description: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  assignee_type: IssueAssigneeType | null;
+  assignee_id: string | null;
+  created_at: string;
+  updated_at: string;
+  domain: string;
+  decision_type: string;
+  object_type: string;
+  object_id: string;
+  objective: string;
+  constraints: string;
+  risk_level: string;
+  execution_mode: string;
+  phase: string;
+  approval_status: string;
+  execution_status: string;
+  project_id: string | null;
+}
+
+export interface DecisionSnapshotSummary {
+  id: string;
+  source: string;
+  source_ref: string;
+  captured_at: string;
+  created_at: string;
+}
+
+export interface DecisionRecommendationSummary {
+  id: string;
+  scenario_option_id: string | null;
+  title: string;
+  expected_impact: string;
+  created_at: string;
+}
+
+export interface DecisionApprovalSummary {
+  id: string;
+  approver_type: string;
+  approver_id: string;
+  status: string;
+  comment: string;
+  sort_order: number;
+  updated_at: string;
+}
+
+export interface DecisionDetail extends DecisionCase {
+  latest_snapshot?: DecisionSnapshotSummary | null;
+  latest_recommendation?: DecisionRecommendationSummary | null;
+  latest_approval?: DecisionApprovalSummary | null;
+}
+
+export interface ListDecisionsParams {
+  page?: number;
+  page_size?: number;
+  phase?: string;
+  risk_level?: string;
+  execution_mode?: string;
+  decision_type?: string;
+  object_type?: string;
+  project_id?: string;
+}
+
+export interface ListDecisionsResponse {
+  decisions: DecisionCase[];
+  total: number;
+}
+
 export interface SearchIssueResult extends Issue {
   match_source: "title" | "description" | "comment";
   matched_snippet?: string;

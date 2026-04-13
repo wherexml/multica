@@ -13,9 +13,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@multica/ui/components/ui/dropdown-menu";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
+import { STATUS_CONFIG, getIssueStatusLabel } from "@multica/core/issues/config";
 import { useModalStore } from "@multica/core/modals";
 import { useViewStoreApi } from "@multica/core/issues/stores/view-store-context";
+import { getClientLocale, t } from "@multica/core/platform";
 import { StatusIcon } from "./status-icon";
 import { DraggableBoardCard } from "./board-card";
 import type { ChildProgress } from "./list-row";
@@ -27,6 +28,8 @@ export function BoardColumn({
   childProgressMap,
   totalCount,
   footer,
+  activeIssueId,
+  onOpenIssue,
 }: {
   status: IssueStatus;
   issueIds: string[];
@@ -34,7 +37,10 @@ export function BoardColumn({
   childProgressMap?: Map<string, ChildProgress>;
   totalCount?: number;
   footer?: ReactNode;
+  activeIssueId?: string;
+  onOpenIssue?: (issueId: string) => void;
 }) {
+  const locale = getClientLocale();
   const cfg = STATUS_CONFIG[status];
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const viewStoreApi = useViewStoreApi();
@@ -56,7 +62,7 @@ export function BoardColumn({
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}>
             <StatusIcon status={status} className="h-3 w-3" inheritColor />
-            {cfg.label}
+            {getIssueStatusLabel(status, locale)}
           </span>
           <span className="text-xs text-muted-foreground">
             {totalCount ?? issueIds.length}
@@ -93,7 +99,7 @@ export function BoardColumn({
                 </Button>
               }
             />
-            <TooltipContent>Add issue</TooltipContent>
+            <TooltipContent>新增{t("issue")}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -105,12 +111,18 @@ export function BoardColumn({
       >
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
           {resolvedIssues.map((issue) => (
-            <DraggableBoardCard key={issue.id} issue={issue} childProgress={childProgressMap?.get(issue.id)} />
+            <DraggableBoardCard
+              key={issue.id}
+              issue={issue}
+              childProgress={childProgressMap?.get(issue.id)}
+              active={activeIssueId === issue.id}
+              onOpenIssue={onOpenIssue}
+            />
           ))}
         </SortableContext>
         {issueIds.length === 0 && (
           <p className="py-8 text-center text-xs text-muted-foreground">
-            No issues
+            暂无{t("issue")}
           </p>
         )}
         {footer}

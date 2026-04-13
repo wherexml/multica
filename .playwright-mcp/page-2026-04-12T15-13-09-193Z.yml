@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - button "L Local Dev" [ref=e10]:
+              - generic [ref=e11]: L
+              - generic [ref=e12]: Local Dev
+              - img [ref=e13]
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e19]:
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Inbox" [ref=e24] [cursor=pointer]:
+              - /url: /inbox
+              - img [ref=e25]
+              - generic [ref=e28]: Inbox
+          - listitem [ref=e29]:
+            - link "My Issues" [ref=e30] [cursor=pointer]:
+              - /url: /my-issues
+              - img [ref=e31]
+              - generic [ref=e35]: My Issues
+          - listitem [ref=e36]:
+            - link "Issues" [ref=e37] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e38]
+              - generic [ref=e41]: Issues
+        - list [ref=e44]:
+          - listitem [ref=e45]:
+            - link "Agents" [ref=e46] [cursor=pointer]:
+              - /url: /agents
+              - img [ref=e47]
+              - generic [ref=e50]: Agents
+          - listitem [ref=e51]:
+            - link "Runtimes" [ref=e52] [cursor=pointer]:
+              - /url: /runtimes
+              - img [ref=e53]
+              - generic [ref=e55]: Runtimes
+          - listitem [ref=e56]:
+            - link "Skills" [ref=e57] [cursor=pointer]:
+              - /url: /skills
+              - img [ref=e58]
+              - generic [ref=e60]: Skills
+          - listitem [ref=e61]:
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e63]
+              - generic [ref=e66]: Settings
+      - button "Toggle Sidebar" [ref=e68]
+    - main [ref=e69]:
+      - generic [ref=e70]:
+        - heading "Agent Detail" [level=1] [ref=e71]
+        - paragraph [ref=e72]: Agent status and task history
+  - region "Notifications alt+T"
+  - alert [ref=e73]

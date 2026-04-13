@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { normalizeAppLocale } from "@/messages/loader";
+
+function readLocaleCookie(cookieValue: string): string | undefined {
+  const match = cookieValue.match(/(?:^|;\s*)multica-locale=([^;]+)/);
+  return match?.[1];
+}
 
 /**
  * Reads the locale cookie on the client and updates <html lang>.
@@ -9,11 +15,8 @@ import { useEffect } from "react";
  */
 export function LocaleSync() {
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)multica-locale=(\w+)/);
-    const locale = match?.[1];
-    if (locale === "zh") {
-      document.documentElement.lang = "zh";
-    }
+    const locale = normalizeAppLocale(readLocaleCookie(document.cookie));
+    document.documentElement.lang = locale;
   }, []);
 
   return null;

@@ -1,0 +1,201 @@
+{
+  "title": "平台设置",
+  "groups": {
+    "account": "我的账户",
+    "workspace": "业务空间"
+  },
+  "tabs": {
+    "profile": "个人资料",
+    "appearance": "外观",
+    "tokens": "API 令牌",
+    "workspace": "通用设置",
+    "repositories": "代码仓库",
+    "members": "成员管理"
+  },
+  "common": {
+    "actions": {
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "取消",
+      "confirm": "确认",
+      "add": "添加",
+      "adding": "添加中...",
+      "create": "创建",
+      "creating": "创建中...",
+      "delete": "删除",
+      "deleting": "删除中...",
+      "revoke": "撤销",
+      "copyToken": "复制令牌",
+      "done": "完成",
+      "updateProfile": "更新个人资料",
+      "updatingProfile": "更新中..."
+    }
+  },
+  "account": {
+    "title": "个人资料",
+    "avatar": {
+      "uploadHint": "点击上传头像"
+    },
+    "fields": {
+      "name": "名称"
+    },
+    "toast": {
+      "avatarUpdated": "头像已更新",
+      "avatarUploadFailed": "上传头像失败",
+      "profileUpdated": "个人资料已更新",
+      "profileUpdateFailed": "更新个人资料失败"
+    }
+  },
+  "appearance": {
+    "title": "主题",
+    "aria": {
+      "themeGroup": "主题",
+      "selectTheme": "选择{name}主题"
+    },
+    "options": {
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    }
+  },
+  "tokens": {
+    "title": "API 令牌",
+    "description": "个人访问令牌可让 CLI 和外部集成以你的账户身份完成认证。",
+    "fields": {
+      "namePlaceholder": "令牌名称（例如：我的 CLI）"
+    },
+    "expiry": {
+      "thirtyDays": "30 天",
+      "ninetyDays": "90 天",
+      "oneYear": "1 年",
+      "never": "永不过期"
+    },
+    "toast": {
+      "loadFailed": "加载令牌失败",
+      "createFailed": "创建令牌失败",
+      "revoked": "令牌已撤销",
+      "revokeFailed": "撤销令牌失败"
+    },
+    "meta": {
+      "created": "创建于 {date}",
+      "lastUsed": "最近使用于 {date}",
+      "neverUsed": "从未使用",
+      "expires": "到期于 {date}"
+    },
+    "actions": {
+      "revokeNamed": "撤销 {name}"
+    },
+    "dialogs": {
+      "revoke": {
+        "title": "撤销令牌",
+        "description": "此令牌将被永久撤销，之后无法再使用。此操作不可撤销。"
+      },
+      "created": {
+        "title": "令牌已创建",
+        "description": "请立即复制你的个人访问令牌。关闭后将无法再次查看。"
+      }
+    }
+  },
+  "workspace": {
+    "title": "通用设置",
+    "fields": {
+      "name": "名称",
+      "description": "描述",
+      "context": "上下文",
+      "slug": "标识符"
+    },
+    "placeholders": {
+      "description": "这个业务空间专注于什么？",
+      "context": "为在此业务空间中工作的 AI Agent 提供背景信息和上下文"
+    },
+    "permissions": {
+      "manageNotice": "只有管理员和所有者可以更新业务空间设置。"
+    },
+    "toast": {
+      "saved": "业务空间设置已保存",
+      "saveFailed": "保存业务空间设置失败"
+    },
+    "dangerZone": {
+      "title": "危险操作区"
+    },
+    "leave": {
+      "title": "离开业务空间",
+      "description": "将你自己移出当前业务空间。",
+      "button": "离开业务空间",
+      "loading": "离开中...",
+      "dialogTitle": "离开业务空间",
+      "dialogDescription": "离开 {name}？在再次被邀请前，你将无法访问这个业务空间。",
+      "toastFailed": "离开业务空间失败"
+    },
+    "delete": {
+      "title": "删除业务空间",
+      "description": "永久删除此业务空间及其所有数据。",
+      "button": "删除业务空间",
+      "loading": "删除中...",
+      "dialogTitle": "删除业务空间",
+      "dialogDescription": "删除 {name}？此操作不可撤销。所有决策单、专家 Agent 和数据都会被永久删除。",
+      "toastFailed": "删除业务空间失败"
+    }
+  },
+  "members": {
+    "title": "成员管理",
+    "titleWithCount": "成员管理 ({count})",
+    "add": {
+      "title": "添加成员"
+    },
+    "fields": {
+      "emailPlaceholder": "user@company.com"
+    },
+    "actions": {
+      "changeRole": "更改角色",
+      "removeFromWorkspace": "移出业务空间"
+    },
+    "empty": "未找到成员。",
+    "toast": {
+      "added": "成员已添加",
+      "addFailed": "添加成员失败",
+      "roleUpdated": "角色已更新",
+      "roleUpdateFailed": "更新成员角色失败",
+      "removed": "成员已移除",
+      "removeFailed": "移除成员失败"
+    },
+    "dialogs": {
+      "remove": {
+        "title": "移除 {name}",
+        "description": "要将 {name} 从 {workspace} 中移除吗？移除后，对方将失去对此业务空间的访问权限。"
+      }
+    },
+    "roles": {
+      "owner": {
+        "label": "所有者",
+        "description": "拥有全部权限，可管理所有设置"
+      },
+      "admin": {
+        "label": "管理员",
+        "description": "可管理成员和设置"
+      },
+      "member": {
+        "label": "成员",
+        "description": "可创建并处理决策单"
+      }
+    }
+  },
+  "repositories": {
+    "title": "代码仓库",
+    "description": "与此业务空间关联的 GitHub 代码仓库。专家 Agent 会使用这些仓库来克隆代码并开展工作。",
+    "fields": {
+      "urlPlaceholder": "https://github.com/org/repo",
+      "descriptionPlaceholder": "描述（例如：Go 后端 + Next.js 前端）"
+    },
+    "actions": {
+      "addRepository": "添加代码仓库"
+    },
+    "permissions": {
+      "manageNotice": "只有管理员和所有者可以管理代码仓库。"
+    },
+    "toast": {
+      "saved": "代码仓库已保存",
+      "saveFailed": "保存代码仓库失败"
+    }
+  }
+}

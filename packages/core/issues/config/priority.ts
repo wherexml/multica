@@ -1,4 +1,5 @@
 import type { IssuePriority } from "../../types";
+import { normalizeLocale } from "../../platform/lexicon";
 
 export const PRIORITY_ORDER: IssuePriority[] = [
   "urgent",
@@ -18,3 +19,33 @@ export const PRIORITY_CONFIG: Record<
   low: { label: "Low", bars: 1, color: "text-info", badgeBg: "bg-priority/10", badgeText: "text-priority" },
   none: { label: "No priority", bars: 0, color: "text-muted-foreground", badgeBg: "bg-muted", badgeText: "text-muted-foreground" },
 };
+
+const PRIORITY_LABEL_KEYS: Record<IssuePriority, "urgent" | "high" | "medium" | "low" | "none"> = {
+  urgent: "urgent",
+  high: "high",
+  medium: "medium",
+  low: "low",
+  none: "none",
+};
+
+const PRIORITY_LABELS = {
+  "en-US": {
+    urgent: "Urgent",
+    high: "High",
+    medium: "Medium",
+    low: "Low",
+    none: "No priority",
+  },
+  "zh-CN": {
+    urgent: "紧急",
+    high: "高",
+    medium: "中",
+    low: "低",
+    none: "无优先级",
+  },
+} as const;
+
+export function getIssuePriorityLabel(priority: IssuePriority, locale?: string): string {
+  const normalizedLocale = normalizeLocale(locale ?? "zh-CN");
+  return PRIORITY_LABELS[normalizedLocale][PRIORITY_LABEL_KEYS[priority]];
+}

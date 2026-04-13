@@ -8,6 +8,42 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ActionRun struct {
+	ID              pgtype.UUID        `json:"id"`
+	DecisionCaseID  pgtype.UUID        `json:"decision_case_id"`
+	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
+	IdempotencyKey  string             `json:"idempotency_key"`
+	ConnectorID     pgtype.UUID        `json:"connector_id"`
+	ActionType      string             `json:"action_type"`
+	RequestPayload  []byte             `json:"request_payload"`
+	ExternalRef     string             `json:"external_ref"`
+	RollbackPayload []byte             `json:"rollback_payload"`
+	Status          string             `json:"status"`
+	RuntimeID       pgtype.UUID        `json:"runtime_id"`
+	ErrorMessage    string             `json:"error_message"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuditEvent struct {
+	ID             pgtype.UUID        `json:"id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
+	ActorType      string             `json:"actor_type"`
+	ActorID        pgtype.UUID        `json:"actor_id"`
+	Action         string             `json:"action"`
+	TargetType     string             `json:"target_type"`
+	TargetID       pgtype.UUID        `json:"target_id"`
+	OldState       []byte             `json:"old_state"`
+	NewState       []byte             `json:"new_state"`
+	Metadata       []byte             `json:"metadata"`
+	IpAddress      string             `json:"ip_address"`
+	UserAgent      string             `json:"user_agent"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type ActivityLog struct {
 	ID          pgtype.UUID        `json:"id"`
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
@@ -140,6 +176,21 @@ type CommentReaction struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type Connector struct {
+	ID              pgtype.UUID        `json:"id"`
+	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
+	Name            string             `json:"name"`
+	Kind            string             `json:"kind"`
+	BaseUrl         string             `json:"base_url"`
+	Capability      string             `json:"capability"`
+	Config          []byte             `json:"config"`
+	AllowedActions  []string           `json:"allowed_actions"`
+	HealthStatus    string             `json:"health_status"`
+	LastHealthCheck pgtype.Timestamptz `json:"last_health_check"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DaemonConnection struct {
 	ID              pgtype.UUID        `json:"id"`
 	AgentID         pgtype.UUID        `json:"agent_id"`
@@ -158,6 +209,63 @@ type DaemonToken struct {
 	DaemonID    string             `json:"daemon_id"`
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type DecisionApproval struct {
+	ID             pgtype.UUID        `json:"id"`
+	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	ApproverType   string             `json:"approver_type"`
+	ApproverID     pgtype.UUID        `json:"approver_id"`
+	Status         string             `json:"status"`
+	Comment        string             `json:"comment"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DecisionCase struct {
+	IssueID         pgtype.UUID        `json:"issue_id"`
+	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
+	ProjectID       pgtype.UUID        `json:"project_id"`
+	Domain          string             `json:"domain"`
+	DecisionType    string             `json:"decision_type"`
+	ObjectType      string             `json:"object_type"`
+	ObjectID        string             `json:"object_id"`
+	Objective       string             `json:"objective"`
+	Constraints     string             `json:"constraints"`
+	RiskLevel       string             `json:"risk_level"`
+	ExecutionMode   string             `json:"execution_mode"`
+	Phase           string             `json:"phase"`
+	ApprovalStatus  string             `json:"approval_status"`
+	ExecutionStatus string             `json:"execution_status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DecisionContextSnapshot struct {
+	ID             pgtype.UUID        `json:"id"`
+	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	Source         string             `json:"source"`
+	SourceRef      string             `json:"source_ref"`
+	Metrics        []byte             `json:"metrics"`
+	CapturedAt     pgtype.Timestamptz `json:"captured_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type DecisionRecommendation struct {
+	ID               pgtype.UUID        `json:"id"`
+	DecisionCaseID   pgtype.UUID        `json:"decision_case_id"`
+	WorkspaceID      pgtype.UUID        `json:"workspace_id"`
+	ScenarioOptionID pgtype.UUID        `json:"scenario_option_id"`
+	Title            string             `json:"title"`
+	Rationale        string             `json:"rationale"`
+	ExpectedImpact   string             `json:"expected_impact"`
+	ConfidenceScore  pgtype.Numeric     `json:"confidence_score"`
+	ModelVersion     string             `json:"model_version"`
+	SkillVersion     string             `json:"skill_version"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type InboxItem struct {
@@ -281,6 +389,18 @@ type Project struct {
 	Priority    string             `json:"priority"`
 }
 
+type RuntimeExecutor struct {
+	RuntimeID        pgtype.UUID        `json:"runtime_id"`
+	ExecutorKind     string             `json:"executor_kind"`
+	NetworkZone      string             `json:"network_zone"`
+	CredentialScope  string             `json:"credential_scope"`
+	ResourceQuota    string             `json:"resource_quota"`
+	AllowedActions   string             `json:"allowed_actions"`
+	ApprovalRequired bool               `json:"approval_required"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type RuntimeUsage struct {
 	ID               pgtype.UUID        `json:"id"`
 	RuntimeID        pgtype.UUID        `json:"runtime_id"`
@@ -293,6 +413,35 @@ type RuntimeUsage struct {
 	CacheWriteTokens int64              `json:"cache_write_tokens"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ScenarioOption struct {
+	ID               pgtype.UUID        `json:"id"`
+	ScenarioRunID    pgtype.UUID        `json:"scenario_run_id"`
+	Title            string             `json:"title"`
+	Description      string             `json:"description"`
+	Metrics          []byte             `json:"metrics"`
+	RiskAssessment   string             `json:"risk_assessment"`
+	FeasibilityScore pgtype.Numeric     `json:"feasibility_score"`
+	IsRecommended    bool               `json:"is_recommended"`
+	SortOrder        int32              `json:"sort_order"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type ScenarioRun struct {
+	ID             pgtype.UUID        `json:"id"`
+	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	SnapshotID     pgtype.UUID        `json:"snapshot_id"`
+	Status         string             `json:"status"`
+	RuntimeID      pgtype.UUID        `json:"runtime_id"`
+	Config         []byte             `json:"config"`
+	ResultSummary  string             `json:"result_summary"`
+	ErrorMessage   string             `json:"error_message"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Skill struct {

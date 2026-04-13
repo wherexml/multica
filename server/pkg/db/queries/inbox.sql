@@ -6,6 +6,77 @@ LEFT JOIN issue iss ON iss.id = i.issue_id
 WHERE i.workspace_id = $1 AND i.recipient_type = $2 AND i.recipient_id = $3 AND i.archived = false
 ORDER BY i.created_at DESC;
 
+-- name: ListTowerAlerts :many
+SELECT
+    i.id,
+    i.type,
+    i.severity,
+    i.title,
+    i.body,
+    i.issue_id,
+    iss.status AS issue_status,
+    i.created_at,
+    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') AS domain,
+    COALESCE(
+        NULLIF(i.details->>'risk_level', ''),
+        NULLIF(dc.risk_level, ''),
+        CASE
+            WHEN i.severity = 'action_required' THEN 'high'
+            WHEN i.severity = 'attention' THEN 'medium'
+            ELSE 'low'
+        END
+    ) AS risk_level
+FROM inbox_item i
+LEFT JOIN issue iss ON iss.id = i.issue_id
+LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id
+WHERE i.workspace_id = sqlc.arg('workspace_id')
+  AND i.archived = false
+  AND i.severity IN ('action_required', 'attention')
+  AND (sqlc.narg('severity')::text IS NULL OR i.severity = sqlc.narg('severity'))
+  AND (
+      sqlc.narg('domain')::text IS NULL
+      OR COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') = sqlc.narg('domain')
+  )
+  AND (
+      sqlc.narg('risk_level')::text IS NULL
+      OR COALESCE(
+          NULLIF(i.details->>'risk_level', ''),
+          NULLIF(dc.risk_level, ''),
+          CASE
+              WHEN i.severity = 'action_required' THEN 'high'
+              WHEN i.severity = 'attention' THEN 'medium'
+              ELSE 'low'
+          END
+      ) = sqlc.narg('risk_level')
+  )
+ORDER BY i.created_at DESC
+LIMIT sqlc.arg('limit_count') OFFSET sqlc.arg('offset_count');
+
+-- name: CountTowerAlerts :one
+SELECT COUNT(*)
+FROM inbox_item i
+LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id
+WHERE i.workspace_id = sqlc.arg('workspace_id')
+  AND i.archived = false
+  AND i.severity IN ('action_required', 'attention')
+  AND (sqlc.narg('severity')::text IS NULL OR i.severity = sqlc.narg('severity'))
+  AND (
+      sqlc.narg('domain')::text IS NULL
+      OR COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') = sqlc.narg('domain')
+  )
+  AND (
+      sqlc.narg('risk_level')::text IS NULL
+      OR COALESCE(
+          NULLIF(i.details->>'risk_level', ''),
+          NULLIF(dc.risk_level, ''),
+          CASE
+              WHEN i.severity = 'action_required' THEN 'high'
+              WHEN i.severity = 'attention' THEN 'medium'
+              ELSE 'low'
+          END
+      ) = sqlc.narg('risk_level')
+  );
+
 -- name: GetInboxItem :one
 SELECT * FROM inbox_item
 WHERE id = $1;

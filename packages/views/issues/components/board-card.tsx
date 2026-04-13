@@ -16,6 +16,11 @@ import { PRIORITY_CONFIG } from "@multica/core/issues/config";
 import { useViewStore } from "@multica/core/issues/stores/view-store-context";
 import { ProgressRing } from "./progress-ring";
 import type { ChildProgress } from "./list-row";
+import {
+  DecisionExecutionModeIndicator,
+  DecisionPhaseIndicator,
+  DecisionRiskBadge,
+} from "./decision-case-meta";
 
 function formatDate(date: string): string {
   return new Date(date).toLocaleDateString("en-US", {
@@ -41,10 +46,12 @@ export const BoardCardContent = memo(function BoardCardContent({
   issue,
   editable = false,
   childProgress,
+  active = false,
 }: {
   issue: Issue;
   editable?: boolean;
   childProgress?: ChildProgress;
+  active?: boolean;
 }) {
   const storeProperties = useViewStore((s) => s.cardProperties);
   const priorityCfg = PRIORITY_CONFIG[issue.priority];
@@ -66,7 +73,9 @@ export const BoardCardContent = memo(function BoardCardContent({
   const showDueDate = storeProperties.dueDate && issue.due_date;
 
   return (
-    <div className="rounded-lg border bg-card p-3.5 shadow-[0_1px_2px_0_rgba(0,0,0,0.03)] transition-shadow group-hover:shadow-sm">
+    <div className={`rounded-lg border bg-card p-3.5 shadow-[0_1px_2px_0_rgba(0,0,0,0.03)] transition-shadow group-hover:shadow-sm ${
+      active ? "ring-2 ring-primary/35" : ""
+    }`}>
       {/* Row 1: Identifier */}
       <p className="text-xs text-muted-foreground">{issue.identifier}</p>
 
@@ -82,6 +91,16 @@ export const BoardCardContent = memo(function BoardCardContent({
           <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
             {childProgress.done}/{childProgress.total}
           </span>
+        </div>
+      )}
+
+      {(issue.risk_level || issue.phase || issue.execution_mode) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {issue.risk_level && <DecisionRiskBadge riskLevel={issue.risk_level} />}
+          {issue.phase && <DecisionPhaseIndicator phase={issue.phase} />}
+          {issue.execution_mode && (
+            <DecisionExecutionModeIndicator mode={issue.execution_mode} />
+          )}
         </div>
       )}
 
@@ -185,7 +204,17 @@ const animateLayoutChanges: AnimateLayoutChanges = (args) => {
   return defaultAnimateLayoutChanges(args);
 };
 
-export const DraggableBoardCard = memo(function DraggableBoardCard({ issue, childProgress }: { issue: Issue; childProgress?: ChildProgress }) {
+export const DraggableBoardCard = memo(function DraggableBoardCard({
+  issue,
+  childProgress,
+  active = false,
+  onOpenIssue,
+}: {
+  issue: Issue;
+  childProgress?: ChildProgress;
+  active?: boolean;
+  onOpenIssue?: (issueId: string) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -212,12 +241,32 @@ export const DraggableBoardCard = memo(function DraggableBoardCard({ issue, chil
       {...listeners}
       className={isDragging ? "opacity-30" : ""}
     >
-      <AppLink
-        href={`/issues/${issue.id}`}
-        className={`group block transition-colors ${isDragging ? "pointer-events-none" : ""}`}
-      >
-        <BoardCardContent issue={issue} editable childProgress={childProgress} />
-      </AppLink>
+      {onOpenIssue ? (
+        <button
+          type="button"
+          onClick={() => onOpenIssue(issue.id)}
+          className={`group block w-full text-left transition-colors ${isDragging ? "pointer-events-none" : ""}`}
+        >
+          <BoardCardContent
+            issue={issue}
+            editable
+            childProgress={childProgress}
+            active={active}
+          />
+        </button>
+      ) : (
+        <AppLink
+          href={`/issues/${issue.id}`}
+          className={`group block transition-colors ${isDragging ? "pointer-events-none" : ""}`}
+        >
+          <BoardCardContent
+            issue={issue}
+            editable
+            childProgress={childProgress}
+            active={active}
+          />
+        </AppLink>
+      )}
     </div>
   );
 });

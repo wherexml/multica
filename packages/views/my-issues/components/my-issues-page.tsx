@@ -5,6 +5,7 @@ import { useStore } from "zustand";
 import { toast } from "sonner";
 import { ChevronRight, ListTodo } from "lucide-react";
 import type { IssueStatus } from "@multica/core/types";
+import { t, getClientLocale } from "@multica/core/platform";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { useAuthStore } from "@multica/core/auth";
 import { useWorkspaceStore } from "@multica/core/workspace";
@@ -23,17 +24,26 @@ import { useWorkspaceId } from "@multica/core/hooks";
 import { myIssueListOptions, type MyIssuesFilter } from "@multica/core/issues/queries";
 import { useUpdateIssue, useLoadMoreDoneIssues } from "@multica/core/issues/mutations";
 import { myIssuesViewStore } from "@multica/core/issues/stores/my-issues-view-store";
+import { useNavigation } from "../../navigation";
 import { MyIssuesHeader } from "./my-issues-header";
 
 export function MyIssuesPage() {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const user = useAuthStore((s) => s.user);
   const workspace = useWorkspaceStore((s) => s.workspace);
   const wsId = useWorkspaceId();
+  const { push } = useNavigation();
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
 
   const viewMode = useStore(myIssuesViewStore, (s) => s.viewMode);
   const statusFilters = useStore(myIssuesViewStore, (s) => s.statusFilters);
   const priorityFilters = useStore(myIssuesViewStore, (s) => s.priorityFilters);
+  const phaseFilters = useStore(myIssuesViewStore, (s) => s.phaseFilters);
+  const riskLevelFilters = useStore(myIssuesViewStore, (s) => s.riskLevelFilters);
+  const executionModeFilters = useStore(myIssuesViewStore, (s) => s.executionModeFilters);
+  const decisionTypeFilters = useStore(myIssuesViewStore, (s) => s.decisionTypeFilters);
+  const objectTypeFilters = useStore(myIssuesViewStore, (s) => s.objectTypeFilters);
   const scope = useStore(myIssuesViewStore, (s) => s.scope);
 
   useEffect(() => {
@@ -84,8 +94,22 @@ export function MyIssuesPage() {
         creatorFilters: [],
         projectFilters: [],
         includeNoProject: false,
+        phaseFilters,
+        riskLevelFilters,
+        executionModeFilters,
+        decisionTypeFilters,
+        objectTypeFilters,
       }),
-    [myIssues, statusFilters, priorityFilters],
+    [
+      myIssues,
+      statusFilters,
+      priorityFilters,
+      phaseFilters,
+      riskLevelFilters,
+      executionModeFilters,
+      decisionTypeFilters,
+      objectTypeFilters,
+    ],
   );
 
   const childProgressMap = useMemo(() => {
@@ -160,6 +184,56 @@ export function MyIssuesPage() {
     );
   }
 
+  const emptyState = (
+    <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
+      <ListTodo className="h-10 w-10 text-muted-foreground/40" />
+      <p className="text-sm">
+        {isZh ? "暂无分配给你的待办" : "No issues assigned to you"}
+      </p>
+      <p className="text-xs">
+        {isZh
+          ? "你创建的或分配给你的事项会出现在这里。"
+          : "Issues you create or are assigned to will appear here."}
+      </p>
+    </div>
+  );
+
+  const listContent = (
+    <ViewStoreProvider store={myIssuesViewStore}>
+      {myIssues.length === 0 ? (
+        emptyState
+      ) : (
+        <div className="flex flex-col flex-1 min-h-0">
+          {viewMode === "board" ? (
+            <BoardView
+              issues={issues}
+              allIssues={myIssues}
+              visibleStatuses={visibleStatuses}
+              hiddenStatuses={hiddenStatuses}
+              onMoveIssue={handleMoveIssue}
+              childProgressMap={childProgressMap}
+              doneTotal={doneTotal}
+              myIssuesScope={scope}
+              myIssuesFilter={filter}
+              onOpenIssue={(issueId) => push(`/issues/${issueId}`)}
+            />
+          ) : (
+            <ListView
+              issues={issues}
+              visibleStatuses={visibleStatuses}
+              childProgressMap={childProgressMap}
+              doneTotal={doneTotal}
+              myIssuesScope={scope}
+              myIssuesFilter={filter}
+              onOpenIssue={(issueId) => push(`/issues/${issueId}`)}
+            />
+          )}
+        </div>
+      )}
+      {viewMode === "list" && <BatchActionToolbar />}
+    </ViewStoreProvider>
+  );
+
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       {/* Header 1: Workspace breadcrumb */}
@@ -169,48 +243,13 @@ export function MyIssuesPage() {
           {workspace?.name ?? "Workspace"}
         </span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm font-medium">My Issues</span>
+        <span className="text-sm font-medium">{t("myIssues", locale)}</span>
       </div>
 
       {/* Header: scope tabs (left) + controls (right) */}
       <MyIssuesHeader allIssues={myIssues} />
 
-      {/* Content: scrollable */}
-      <ViewStoreProvider store={myIssuesViewStore}>
-        {myIssues.length === 0 ? (
-          <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
-            <ListTodo className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm">No issues assigned to you</p>
-            <p className="text-xs">Issues you create or are assigned to will appear here.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col flex-1 min-h-0">
-            {viewMode === "board" ? (
-              <BoardView
-                issues={issues}
-                allIssues={myIssues}
-                visibleStatuses={visibleStatuses}
-                hiddenStatuses={hiddenStatuses}
-                onMoveIssue={handleMoveIssue}
-                childProgressMap={childProgressMap}
-                doneTotal={doneTotal}
-                myIssuesScope={scope}
-                myIssuesFilter={filter}
-              />
-            ) : (
-              <ListView
-                issues={issues}
-                visibleStatuses={visibleStatuses}
-                childProgressMap={childProgressMap}
-                doneTotal={doneTotal}
-                myIssuesScope={scope}
-                myIssuesFilter={filter}
-              />
-            )}
-          </div>
-        )}
-        {viewMode === "list" && <BatchActionToolbar />}
-      </ViewStoreProvider>
+      <div className="min-h-0 flex-1">{listContent}</div>
     </div>
   );
 }

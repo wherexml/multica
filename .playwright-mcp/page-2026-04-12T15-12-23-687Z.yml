@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Multica
+      - generic [ref=e6]: Sign in to your account
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - text: Email
+        - textbox "Email" [ref=e10]:
+          - /placeholder: you@example.com
+      - generic [ref=e11]:
+        - text: Password
+        - textbox "Password" [ref=e12]:
+          - /placeholder: ••••••••
+      - button "Sign in" [ref=e13]
+    - paragraph [ref=e15]:
+      - text: Don't have an account?
+      - link "Sign up" [ref=e16] [cursor=pointer]:
+        - /url: /register
+  - region "Notifications alt+T"
+  - alert [ref=e17]

@@ -9,5 +9,5 @@ export default function IssueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  return <IssueDetail issueId={id} />;
+  return <IssueDetail issueId={id} showBackLink backHref="/issues" />;
 }

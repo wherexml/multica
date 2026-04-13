@@ -217,6 +217,10 @@ migrate-down:
 sqlc:
 	cd server && sqlc generate
 
+# Seed admin user for local/demo deployments
+seed-admin:
+	@bash scripts/seed-admin.sh
+
 # Cleanup
 clean:
 	rm -rf server/bin server/tmp

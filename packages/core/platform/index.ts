@@ -5,3 +5,7 @@ export { defaultStorage } from "./storage";
 export { createPersistStorage } from "./persist-storage";
 export { createWorkspaceAwareStorage, setCurrentWorkspaceId, getCurrentWorkspaceId, registerForWorkspaceRehydration, rehydrateAllWorkspaceStores } from "./workspace-storage";
 export { clearWorkspaceStorage } from "./storage-cleanup";
+export { Lexicon, getClientLocale, getDefaultLocale, normalizeLocale, t } from "./lexicon";
+export type { LexiconKey, LexiconLocale } from "./lexicon";
+export { SettingsMessages, getSettingsLocale, settingsT } from "./settings-messages";
+export type { SettingsMessageKey } from "./settings-messages";

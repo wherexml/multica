@@ -155,6 +155,7 @@ vi.mock("../../projects/components/project-picker", () => ({
 // Mock api
 const mockApiObj = vi.hoisted(() => ({
   getIssue: vi.fn(),
+  getDecision: vi.fn(),
   listTimeline: vi.fn().mockResolvedValue([]),
   listComments: vi.fn().mockResolvedValue([]),
   createComment: vi.fn(),
@@ -208,6 +209,24 @@ vi.mock("@multica/core/issues/config", () => ({
     low: { label: "Low", bars: 1, color: "text-info", badgeBg: "bg-info/10", badgeText: "text-info" },
     none: { label: "No priority", bars: 0, color: "text-muted-foreground", badgeBg: "bg-muted", badgeText: "text-muted-foreground" },
   },
+  getIssueStatusLabel: (status: string) =>
+    ({
+      backlog: "Backlog",
+      todo: "Todo",
+      in_progress: "In Progress",
+      in_review: "In Review",
+      done: "Done",
+      blocked: "Blocked",
+      cancelled: "Cancelled",
+    })[status] ?? status,
+  getIssuePriorityLabel: (priority: string) =>
+    ({
+      urgent: "Urgent",
+      high: "High",
+      medium: "Medium",
+      low: "Low",
+      none: "No priority",
+    })[priority] ?? priority,
 }));
 
 // Mock recent issues store
@@ -313,6 +332,49 @@ const mockTimeline: TimelineEntry[] = [
   },
 ];
 
+const mockDecisionIssue: Issue = {
+  ...mockIssue,
+  title: "库存调拨决策",
+  phase: "awaiting_approval",
+  risk_level: "high",
+  execution_mode: "semi_auto",
+  decision_type: "inventory_rebalance",
+  object_type: "warehouse",
+};
+
+const mockDecisionDetail = {
+  ...mockDecisionIssue,
+  domain: "supply_chain",
+  object_id: "warehouse-east",
+  objective: "降低东区缺货风险",
+  constraints: "不能影响西区安全库存",
+  approval_status: "pending",
+  execution_status: "idle",
+  latest_snapshot: {
+    id: "snapshot-1",
+    source: "tower",
+    source_ref: "tower://east",
+    captured_at: "2026-01-20T08:00:00Z",
+    created_at: "2026-01-20T08:00:00Z",
+  },
+  latest_recommendation: {
+    id: "recommendation-1",
+    scenario_option_id: "option-1",
+    title: "从北仓调拨到东仓",
+    expected_impact: "预计 48 小时内恢复东区可售库存",
+    created_at: "2026-01-20T08:10:00Z",
+  },
+  latest_approval: {
+    id: "approval-1",
+    approver_type: "member",
+    approver_id: "user-1",
+    status: "pending",
+    comment: "等待运营负责人确认",
+    sort_order: 1,
+    updated_at: "2026-01-20T08:15:00Z",
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Import component under test (after mocks)
 // ---------------------------------------------------------------------------
@@ -350,8 +412,10 @@ function renderIssueDetail(issueId = "issue-1") {
 describe("IssueDetail (shared)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.cookie = "multica-locale=en-US; path=/";
     // Default: issue loads successfully
     mockApiObj.getIssue.mockResolvedValue(mockIssue);
+    mockApiObj.getDecision.mockResolvedValue(mockDecisionDetail);
     mockApiObj.listTimeline.mockResolvedValue(mockTimeline);
     mockApiObj.listIssueReactions.mockResolvedValue([]);
     mockApiObj.listIssueSubscribers.mockResolvedValue([]);
@@ -466,6 +530,59 @@ describe("IssueDetail (shared)", () => {
       expect(screen.getByText("Started working on this")).toBeInTheDocument();
     });
 
+    expect(screen.getByText("I can help with this")).toBeInTheDocument();
+  });
+
+  it("shows only the overview tab when the issue has no decision metadata", async () => {
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "概览" })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("tab", { name: "指标快照" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "协同记录" })).not.toBeInTheDocument();
+  });
+
+  it("shows the full decision workflow tabs when decision metadata exists", async () => {
+    mockApiObj.getIssue.mockResolvedValue(mockDecisionIssue);
+
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "指标快照" })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("tab", { name: "诊断分析" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "场景仿真" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "推荐方案" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "审批流" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "动作执行" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "协同记录" })).toBeInTheDocument();
+  });
+
+  it("keeps the sidebar and collaboration content working when switching tabs", async () => {
+    mockApiObj.getIssue.mockResolvedValue(mockDecisionIssue);
+
+    const user = (await import("@testing-library/user-event")).default;
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "审批流" })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("tab", { name: "审批流" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("当前审批状态")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Properties")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "协同记录" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Started working on this")).toBeInTheDocument();
+    });
     expect(screen.getByText("I can help with this")).toBeInTheDocument();
   });
 });

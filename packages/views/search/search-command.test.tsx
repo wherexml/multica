@@ -50,7 +50,7 @@ describe("SearchCommand", () => {
 
     render(<SearchCommand />);
 
-    const input = screen.getByPlaceholderText("Type a command or search...");
+    const input = screen.getByPlaceholderText("输入关键词进行搜索...");
     await user.click(input);
 
     expect(useSearchStore.getState().open).toBe(true);
@@ -60,38 +60,40 @@ describe("SearchCommand", () => {
     await waitFor(() => {
       expect(useSearchStore.getState().open).toBe(false);
     });
-    expect(screen.queryByPlaceholderText("Type a command or search...")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("输入关键词进行搜索...")).not.toBeInTheDocument();
   });
 
   it("does not show pages when no query is entered", () => {
     render(<SearchCommand />);
 
-    expect(screen.queryByText("Pages")).not.toBeInTheDocument();
+    expect(screen.queryByText("页面")).not.toBeInTheDocument();
   });
 
   it("filters navigation pages by query", async () => {
     const user = userEvent.setup();
     render(<SearchCommand />);
 
-    const input = screen.getByPlaceholderText("Type a command or search...");
-    await user.type(input, "set");
+    const input = screen.getByPlaceholderText("输入关键词进行搜索...");
+    await user.type(input, "设置");
 
     await waitFor(() => {
       // HighlightText splits text, so use a function matcher
-      expect(screen.getByText((_, el) => el?.textContent === "Settings" && el?.tagName === "SPAN")).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.textContent === "平台设置" && el?.tagName === "SPAN")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Inbox")).not.toBeInTheDocument();
-    expect(screen.queryByText("Projects")).not.toBeInTheDocument();
+    expect(screen.queryByText("工作台")).not.toBeInTheDocument();
+    expect(screen.queryByText("项目中心")).not.toBeInTheDocument();
   });
 
   it("navigates to page on selection", async () => {
     const user = userEvent.setup();
     render(<SearchCommand />);
 
-    const input = screen.getByPlaceholderText("Type a command or search...");
-    await user.type(input, "settings");
+    const input = screen.getByPlaceholderText("输入关键词进行搜索...");
+    await user.type(input, "设置");
 
-    const settingsItem = await screen.findByText("Settings");
+    const settingsItem = await screen.findByText(
+      (_, el) => el?.textContent === "平台设置" && el?.getAttribute("cmdk-item") !== null,
+    );
     await user.click(settingsItem);
 
     expect(mockPush).toHaveBeenCalledWith("/settings");

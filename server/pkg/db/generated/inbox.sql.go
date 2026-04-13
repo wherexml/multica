@@ -138,6 +138,46 @@ func (q *Queries) CountUnreadInbox(ctx context.Context, arg CountUnreadInboxPara
 	return count, err
 }
 
+const countTowerAlerts = `-- name: CountTowerAlerts :one
+SELECT COUNT(*)
+FROM inbox_item i
+LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id
+WHERE i.workspace_id = $1
+  AND i.archived = false
+  AND i.severity IN ('action_required', 'attention')
+  AND ($2::text IS NULL OR i.severity = $2)
+  AND (
+      $3::text IS NULL
+      OR COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') = $3
+  )
+  AND (
+      $4::text IS NULL
+      OR COALESCE(
+          NULLIF(i.details->>'risk_level', ''),
+          NULLIF(dc.risk_level, ''),
+          CASE
+              WHEN i.severity = 'action_required' THEN 'high'
+              WHEN i.severity = 'attention' THEN 'medium'
+              ELSE 'low'
+          END
+      ) = $4
+  )
+`
+
+type CountTowerAlertsParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	Severity    pgtype.Text `json:"severity"`
+	Domain      pgtype.Text `json:"domain"`
+	RiskLevel   pgtype.Text `json:"risk_level"`
+}
+
+func (q *Queries) CountTowerAlerts(ctx context.Context, arg CountTowerAlertsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTowerAlerts, arg.WorkspaceID, arg.Severity, arg.Domain, arg.RiskLevel)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createInboxItem = `-- name: CreateInboxItem :one
 INSERT INTO inbox_item (
     workspace_id, recipient_type, recipient_id,
@@ -317,6 +357,113 @@ func (q *Queries) ListInboxItems(ctx context.Context, arg ListInboxItemsParams) 
 			&i.ActorID,
 			&i.Details,
 			&i.IssueStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTowerAlerts = `-- name: ListTowerAlerts :many
+SELECT
+    i.id,
+    i.type,
+    i.severity,
+    i.title,
+    i.body,
+    i.issue_id,
+    iss.status AS issue_status,
+    i.created_at,
+    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') AS domain,
+    COALESCE(
+        NULLIF(i.details->>'risk_level', ''),
+        NULLIF(dc.risk_level, ''),
+        CASE
+            WHEN i.severity = 'action_required' THEN 'high'
+            WHEN i.severity = 'attention' THEN 'medium'
+            ELSE 'low'
+        END
+    ) AS risk_level
+FROM inbox_item i
+LEFT JOIN issue iss ON iss.id = i.issue_id
+LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id
+WHERE i.workspace_id = $1
+  AND i.archived = false
+  AND i.severity IN ('action_required', 'attention')
+  AND ($2::text IS NULL OR i.severity = $2)
+  AND (
+      $3::text IS NULL
+      OR COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') = $3
+  )
+  AND (
+      $4::text IS NULL
+      OR COALESCE(
+          NULLIF(i.details->>'risk_level', ''),
+          NULLIF(dc.risk_level, ''),
+          CASE
+              WHEN i.severity = 'action_required' THEN 'high'
+              WHEN i.severity = 'attention' THEN 'medium'
+              ELSE 'low'
+          END
+      ) = $4
+  )
+ORDER BY i.created_at DESC
+LIMIT $5 OFFSET $6
+`
+
+type ListTowerAlertsParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	Severity    pgtype.Text `json:"severity"`
+	Domain      pgtype.Text `json:"domain"`
+	RiskLevel   pgtype.Text `json:"risk_level"`
+	LimitCount  int32       `json:"limit_count"`
+	OffsetCount int32       `json:"offset_count"`
+}
+
+type ListTowerAlertsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Type        string             `json:"type"`
+	Severity    string             `json:"severity"`
+	Title       string             `json:"title"`
+	Body        pgtype.Text        `json:"body"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	IssueStatus pgtype.Text        `json:"issue_status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Domain      string             `json:"domain"`
+	RiskLevel   string             `json:"risk_level"`
+}
+
+func (q *Queries) ListTowerAlerts(ctx context.Context, arg ListTowerAlertsParams) ([]ListTowerAlertsRow, error) {
+	rows, err := q.db.Query(ctx, listTowerAlerts,
+		arg.WorkspaceID,
+		arg.Severity,
+		arg.Domain,
+		arg.RiskLevel,
+		arg.LimitCount,
+		arg.OffsetCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTowerAlertsRow{}
+	for rows.Next() {
+		var i ListTowerAlertsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.Severity,
+			&i.Title,
+			&i.Body,
+			&i.IssueID,
+			&i.IssueStatus,
+			&i.CreatedAt,
+			&i.Domain,
+			&i.RiskLevel,
 		); err != nil {
 			return nil, err
 		}

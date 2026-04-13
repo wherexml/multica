@@ -31,8 +31,9 @@ export function DashboardLayout({
         </div>
       }
     >
-      <SidebarProvider className="h-svh">
-        <AppSidebar searchSlot={searchSlot} />
+      <SidebarProvider defaultOpen={true} className="h-svh">
+        {/* Force sidebar to always be visible - not collapsible */}
+        <AppSidebar searchSlot={searchSlot} collapsible="none" />
         <SidebarInset className="overflow-hidden">
           <div className="flex h-10 shrink-0 items-center border-b px-2 md:hidden">
             <SidebarTrigger />

@@ -21,6 +21,13 @@ Closes #<!-- issue number -->
 
 <!-- How can a reviewer verify this works? Steps, commands, or screenshots. -->
 
+## Impact Review
+
+- [ ] Does this change affect API endpoints?
+- [ ] Does this change add/modify database migrations?
+- [ ] Does this change affect i18n/translations?
+- [ ] Does this change modify routing (frontend or backend)?
+
 ## Checklist
 
 - [ ] `make check` passes (typecheck, unit tests, Go tests, E2E)

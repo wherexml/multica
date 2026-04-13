@@ -3,7 +3,13 @@
 import { create } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { IssueStatus, IssuePriority } from "../../types";
+import type {
+  DecisionExecutionMode,
+  DecisionPhase,
+  DecisionRiskLevel,
+  IssuePriority,
+  IssueStatus,
+} from "../../types";
 import { ALL_STATUSES } from "../config";
 import { createWorkspaceAwareStorage, registerForWorkspaceRehydration } from "../../platform/workspace-storage";
 import { defaultStorage } from "../../platform/storage";
@@ -22,6 +28,12 @@ export interface CardProperties {
 export interface ActorFilterValue {
   type: "member" | "agent";
   id: string;
+}
+
+function toggleValue<T extends string>(values: T[], value: T): T[] {
+  return values.includes(value)
+    ? values.filter((entry) => entry !== value)
+    : [...values, value];
 }
 
 export const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -48,6 +60,11 @@ export interface IssueViewState {
   creatorFilters: ActorFilterValue[];
   projectFilters: string[];
   includeNoProject: boolean;
+  phaseFilters: DecisionPhase[];
+  riskLevelFilters: DecisionRiskLevel[];
+  executionModeFilters: DecisionExecutionMode[];
+  decisionTypeFilters: string[];
+  objectTypeFilters: string[];
   sortBy: SortField;
   sortDirection: SortDirection;
   cardProperties: CardProperties;
@@ -60,6 +77,16 @@ export interface IssueViewState {
   toggleCreatorFilter: (value: ActorFilterValue) => void;
   toggleProjectFilter: (projectId: string) => void;
   toggleNoProject: () => void;
+  togglePhaseFilter: (phase: DecisionPhase) => void;
+  setPhaseFilters: (filters: DecisionPhase[]) => void;
+  toggleRiskLevelFilter: (riskLevel: DecisionRiskLevel) => void;
+  setRiskLevelFilters: (filters: DecisionRiskLevel[]) => void;
+  toggleExecutionModeFilter: (executionMode: DecisionExecutionMode) => void;
+  setExecutionModeFilters: (filters: DecisionExecutionMode[]) => void;
+  toggleDecisionTypeFilter: (decisionType: string) => void;
+  setDecisionTypeFilters: (filters: string[]) => void;
+  toggleObjectTypeFilter: (objectType: string) => void;
+  setObjectTypeFilters: (filters: string[]) => void;
   hideStatus: (status: IssueStatus) => void;
   showStatus: (status: IssueStatus) => void;
   clearFilters: () => void;
@@ -78,6 +105,11 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
   creatorFilters: [],
   projectFilters: [],
   includeNoProject: false,
+  phaseFilters: [],
+  riskLevelFilters: [],
+  executionModeFilters: [],
+  decisionTypeFilters: [],
+  objectTypeFilters: [],
   sortBy: "position",
   sortDirection: "asc",
   cardProperties: {
@@ -91,15 +123,11 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
   setViewMode: (mode) => set({ viewMode: mode }),
   toggleStatusFilter: (status) =>
     set((state) => ({
-      statusFilters: state.statusFilters.includes(status)
-        ? state.statusFilters.filter((s) => s !== status)
-        : [...state.statusFilters, status],
+      statusFilters: toggleValue(state.statusFilters, status),
     })),
   togglePriorityFilter: (priority) =>
     set((state) => ({
-      priorityFilters: state.priorityFilters.includes(priority)
-        ? state.priorityFilters.filter((p) => p !== priority)
-        : [...state.priorityFilters, priority],
+      priorityFilters: toggleValue(state.priorityFilters, priority),
     })),
   toggleAssigneeFilter: (value) =>
     set((state) => {
@@ -131,12 +159,37 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
     }),
   toggleProjectFilter: (projectId) =>
     set((state) => ({
-      projectFilters: state.projectFilters.includes(projectId)
-        ? state.projectFilters.filter((id) => id !== projectId)
-        : [...state.projectFilters, projectId],
+      projectFilters: toggleValue(state.projectFilters, projectId),
     })),
   toggleNoProject: () =>
     set((state) => ({ includeNoProject: !state.includeNoProject })),
+  togglePhaseFilter: (phase) =>
+    set((state) => ({
+      phaseFilters: toggleValue(state.phaseFilters, phase),
+    })),
+  setPhaseFilters: (filters) => set({ phaseFilters: [...filters] }),
+  toggleRiskLevelFilter: (riskLevel) =>
+    set((state) => ({
+      riskLevelFilters: toggleValue(state.riskLevelFilters, riskLevel),
+    })),
+  setRiskLevelFilters: (filters) => set({ riskLevelFilters: [...filters] }),
+  toggleExecutionModeFilter: (executionMode) =>
+    set((state) => ({
+      executionModeFilters: toggleValue(state.executionModeFilters, executionMode),
+    })),
+  setExecutionModeFilters: (filters) =>
+    set({ executionModeFilters: [...filters] }),
+  toggleDecisionTypeFilter: (decisionType) =>
+    set((state) => ({
+      decisionTypeFilters: toggleValue(state.decisionTypeFilters, decisionType),
+    })),
+  setDecisionTypeFilters: (filters) =>
+    set({ decisionTypeFilters: [...filters] }),
+  toggleObjectTypeFilter: (objectType) =>
+    set((state) => ({
+      objectTypeFilters: toggleValue(state.objectTypeFilters, objectType),
+    })),
+  setObjectTypeFilters: (filters) => set({ objectTypeFilters: [...filters] }),
   hideStatus: (status) =>
     set((state) => {
       // If no filter active, activate filter with all EXCEPT this one
@@ -162,6 +215,11 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
       creatorFilters: [],
       projectFilters: [],
       includeNoProject: false,
+      phaseFilters: [],
+      riskLevelFilters: [],
+      executionModeFilters: [],
+      decisionTypeFilters: [],
+      objectTypeFilters: [],
     }),
   setSortBy: (field) => set({ sortBy: field }),
   setSortDirection: (dir) => set({ sortDirection: dir }),
@@ -192,6 +250,11 @@ export const viewStorePersistOptions = (name: string) => ({
     creatorFilters: state.creatorFilters,
     projectFilters: state.projectFilters,
     includeNoProject: state.includeNoProject,
+    phaseFilters: state.phaseFilters,
+    riskLevelFilters: state.riskLevelFilters,
+    executionModeFilters: state.executionModeFilters,
+    decisionTypeFilters: state.decisionTypeFilters,
+    objectTypeFilters: state.objectTypeFilters,
     sortBy: state.sortBy,
     sortDirection: state.sortDirection,
     cardProperties: state.cardProperties,

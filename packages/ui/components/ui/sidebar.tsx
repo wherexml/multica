@@ -87,9 +87,20 @@ function SidebarProvider({
     localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clamped))
   }, [])
 
+  // Read sidebar state from cookie on initialization
+  // Always default to open unless user explicitly closed it
+  const getOpenFromCookie = (): boolean => {
+    if (typeof document === "undefined") return true // Default to open on server
+    const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${SIDEBAR_COOKIE_NAME}=([^;]+)`))
+    // If no cookie exists, default to open (true)
+    // If cookie exists, use its value
+    if (!match) return true
+    return match[1] === "true"
+  }
+
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
+  const [_open, _setOpen] = React.useState(getOpenFromCookie)
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -213,7 +224,7 @@ function Sidebar({
 
   return (
     <div
-      className="group peer hidden text-sidebar-foreground md:block"
+      className="group peer hidden md:block text-sidebar-foreground"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}

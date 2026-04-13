@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import type { UpdateIssueRequest } from "@multica/core/types";
+import { getClientLocale } from "@multica/core/platform";
 import { Calendar } from "@multica/ui/components/ui/calendar";
 import {
   Popover,
@@ -24,6 +25,8 @@ export function DueDatePicker({
   triggerRender?: React.ReactElement;
   align?: "start" | "center" | "end";
 }) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const [open, setOpen] = useState(false);
   const date = dueDate ? new Date(dueDate) : undefined;
   const isOverdue = date ? date < new Date() : false;
@@ -39,10 +42,12 @@ export function DueDatePicker({
             <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
             {date ? (
               <span className={isOverdue ? "text-destructive" : ""}>
-                {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {date.toLocaleDateString(locale, { month: "short", day: "numeric" })}
               </span>
             ) : (
-              <span className="text-muted-foreground">Due date</span>
+              <span className="text-muted-foreground">
+                {isZh ? "截止时间" : "Due date"}
+              </span>
             )}
           </>
         )}
@@ -67,7 +72,7 @@ export function DueDatePicker({
               }}
               className="text-muted-foreground hover:text-foreground"
             >
-              Clear date
+              {isZh ? "清除日期" : "Clear date"}
             </Button>
           </div>
         )}

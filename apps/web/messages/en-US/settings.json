@@ -1,0 +1,201 @@
+{
+  "title": "Settings",
+  "groups": {
+    "account": "My Account",
+    "workspace": "Workspace"
+  },
+  "tabs": {
+    "profile": "Profile",
+    "appearance": "Appearance",
+    "tokens": "API Tokens",
+    "workspace": "General",
+    "repositories": "Repositories",
+    "members": "Members"
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "add": "Add",
+      "adding": "Adding...",
+      "create": "Create",
+      "creating": "Creating...",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "revoke": "Revoke",
+      "copyToken": "Copy token",
+      "done": "Done",
+      "updateProfile": "Update Profile",
+      "updatingProfile": "Updating..."
+    }
+  },
+  "account": {
+    "title": "Profile",
+    "avatar": {
+      "uploadHint": "Click to upload avatar"
+    },
+    "fields": {
+      "name": "Name"
+    },
+    "toast": {
+      "avatarUpdated": "Avatar updated",
+      "avatarUploadFailed": "Failed to upload avatar",
+      "profileUpdated": "Profile updated",
+      "profileUpdateFailed": "Failed to update profile"
+    }
+  },
+  "appearance": {
+    "title": "Theme",
+    "aria": {
+      "themeGroup": "Theme",
+      "selectTheme": "Select {name} theme"
+    },
+    "options": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "tokens": {
+    "title": "API Tokens",
+    "description": "Personal access tokens allow the CLI and external integrations to authenticate with your account.",
+    "fields": {
+      "namePlaceholder": "Token name (e.g. My CLI)"
+    },
+    "expiry": {
+      "thirtyDays": "30 days",
+      "ninetyDays": "90 days",
+      "oneYear": "1 year",
+      "never": "No expiry"
+    },
+    "toast": {
+      "loadFailed": "Failed to load tokens",
+      "createFailed": "Failed to create token",
+      "revoked": "Token revoked",
+      "revokeFailed": "Failed to revoke token"
+    },
+    "meta": {
+      "created": "Created {date}",
+      "lastUsed": "Last used {date}",
+      "neverUsed": "Never used",
+      "expires": "Expires {date}"
+    },
+    "actions": {
+      "revokeNamed": "Revoke {name}"
+    },
+    "dialogs": {
+      "revoke": {
+        "title": "Revoke token",
+        "description": "This token will be permanently revoked and can no longer be used. This cannot be undone."
+      },
+      "created": {
+        "title": "Token created",
+        "description": "Copy your personal access token now. You won't be able to see it again."
+      }
+    }
+  },
+  "workspace": {
+    "title": "General",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "context": "Context",
+      "slug": "Slug"
+    },
+    "placeholders": {
+      "description": "What does this workspace focus on?",
+      "context": "Background information and context for AI agents working in this workspace"
+    },
+    "permissions": {
+      "manageNotice": "Only admins and owners can update workspace settings."
+    },
+    "toast": {
+      "saved": "Workspace settings saved",
+      "saveFailed": "Failed to save workspace settings"
+    },
+    "dangerZone": {
+      "title": "Danger Zone"
+    },
+    "leave": {
+      "title": "Leave workspace",
+      "description": "Remove yourself from this workspace.",
+      "button": "Leave workspace",
+      "loading": "Leaving...",
+      "dialogTitle": "Leave workspace",
+      "dialogDescription": "Leave {name}? You will lose access until re-invited.",
+      "toastFailed": "Failed to leave workspace"
+    },
+    "delete": {
+      "title": "Delete workspace",
+      "description": "Permanently delete this workspace and its data.",
+      "button": "Delete workspace",
+      "loading": "Deleting...",
+      "dialogTitle": "Delete workspace",
+      "dialogDescription": "Delete {name}? This cannot be undone. All issues, agents, and data will be permanently removed.",
+      "toastFailed": "Failed to delete workspace"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "titleWithCount": "Members ({count})",
+    "add": {
+      "title": "Add member"
+    },
+    "fields": {
+      "emailPlaceholder": "user@company.com"
+    },
+    "actions": {
+      "changeRole": "Change role",
+      "removeFromWorkspace": "Remove from workspace"
+    },
+    "empty": "No members found.",
+    "toast": {
+      "added": "Member added",
+      "addFailed": "Failed to add member",
+      "roleUpdated": "Role updated",
+      "roleUpdateFailed": "Failed to update member",
+      "removed": "Member removed",
+      "removeFailed": "Failed to remove member"
+    },
+    "dialogs": {
+      "remove": {
+        "title": "Remove {name}",
+        "description": "Remove {name} from {workspace}? They will lose access to this workspace."
+      }
+    },
+    "roles": {
+      "owner": {
+        "label": "Owner",
+        "description": "Full access, manage all settings"
+      },
+      "admin": {
+        "label": "Admin",
+        "description": "Manage members and settings"
+      },
+      "member": {
+        "label": "Member",
+        "description": "Create and work on issues"
+      }
+    }
+  },
+  "repositories": {
+    "title": "Repositories",
+    "description": "GitHub repositories associated with this workspace. Agents use these to clone and work on code.",
+    "fields": {
+      "urlPlaceholder": "https://github.com/org/repo",
+      "descriptionPlaceholder": "Description (e.g. Go backend + Next.js frontend)"
+    },
+    "actions": {
+      "addRepository": "Add repository"
+    },
+    "permissions": {
+      "manageNotice": "Only admins and owners can manage repositories."
+    },
+    "toast": {
+      "saved": "Repositories saved",
+      "saveFailed": "Failed to save repositories"
+    }
+  }
+}

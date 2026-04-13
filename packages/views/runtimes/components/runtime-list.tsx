@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AgentRuntime, MemberWithUser } from "@multica/core/types";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { memberListOptions } from "@multica/core/workspace/queries";
+import { Badge } from "@multica/ui/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +15,62 @@ import { ActorAvatar } from "../../common/actor-avatar";
 import { ProviderLogo } from "./provider-logo";
 
 type RuntimeFilter = "mine" | "all";
+
+type RuntimeExecutor = {
+  executor_kind?: string;
+};
+
+type RuntimeWithExecutor = AgentRuntime & {
+  executor?: RuntimeExecutor | null;
+};
+
+const executorKindMeta: Record<string, { label: string; badgeClassName: string }> = {
+  llm_agent: {
+    label: "LLM 智能体",
+    badgeClassName: "border-info/20 bg-info/10 text-info",
+  },
+  sql_runner: {
+    label: "SQL 执行器",
+    badgeClassName: "border-success/20 bg-success/10 text-success",
+  },
+  python_worker: {
+    label: "Python 工作器",
+    badgeClassName: "border-warning/20 bg-warning/10 text-warning",
+  },
+  optimizer: {
+    label: "优化器",
+    badgeClassName: "border-purple-200 bg-purple-100 text-purple-700 dark:border-purple-500/30 dark:bg-purple-500/20 dark:text-purple-200",
+  },
+  connector_action: {
+    label: "连接器",
+    badgeClassName: "border-cyan-200 bg-cyan-100 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/20 dark:text-cyan-200",
+  },
+};
+
+const runtimeModeLabelMap: Record<string, string> = {
+  local: "本地",
+  cloud: "云端",
+};
+
+function getExecutorBadge(runtime: AgentRuntime) {
+  const executor = (runtime as RuntimeWithExecutor).executor;
+
+  if (!executor?.executor_kind) {
+    return {
+      label: "默认",
+      badgeClassName: "border-border bg-muted text-muted-foreground",
+    };
+  }
+
+  return executorKindMeta[executor.executor_kind] ?? {
+    label: executor.executor_kind,
+    badgeClassName: "border-border bg-muted text-muted-foreground",
+  };
+}
+
+function getRuntimeModeLabel(mode: string) {
+  return runtimeModeLabelMap[mode] ?? mode;
+}
 
 function RuntimeListItem({
   runtime,
@@ -28,6 +85,8 @@ function RuntimeListItem({
   hasUpdate: boolean;
   onClick: () => void;
 }) {
+  const executorBadge = getExecutorBadge(runtime);
+
   return (
     <button
       onClick={onClick}
@@ -39,7 +98,15 @@ function RuntimeListItem({
         <ProviderLogo provider={runtime.provider} className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{runtime.name}</div>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="truncate text-sm font-medium">{runtime.name}</div>
+          <Badge
+            variant="outline"
+            className={`h-4 shrink-0 rounded-full px-1.5 text-[10px] ${executorBadge.badgeClassName}`}
+          >
+            {executorBadge.label}
+          </Badge>
+        </div>
         <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
           {ownerMember ? (
             <>
@@ -51,13 +118,13 @@ function RuntimeListItem({
               <span className="truncate">{ownerMember.name}</span>
             </>
           ) : (
-            <span className="truncate">{runtime.runtime_mode}</span>
+            <span className="truncate">{getRuntimeModeLabel(runtime.runtime_mode)}</span>
           )}
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {hasUpdate && (
-          <span title="Update available">
+          <span title="有可用更新">
             <ArrowUpCircle className="h-3.5 w-3.5 text-info" />
           </span>
         )}
@@ -121,10 +188,10 @@ export function RuntimeList({
   return (
     <div className="overflow-y-auto h-full border-r">
       <div className="flex h-12 items-center justify-between border-b px-4">
-        <h1 className="text-sm font-semibold">Runtimes</h1>
+        <h1 className="text-sm font-semibold">执行环境</h1>
         <span className="text-xs text-muted-foreground">
           {filteredRuntimes.filter((r) => r.status === "online").length}/
-          {filteredRuntimes.length} online
+          {filteredRuntimes.length} 在线
         </span>
       </div>
 
@@ -140,7 +207,7 @@ export function RuntimeList({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Mine
+            我的
           </button>
           <button
             onClick={() => { onFilterChange("all"); onOwnerFilterChange(null); }}
@@ -150,7 +217,7 @@ export function RuntimeList({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            All
+            全部
           </button>
         </div>
 
@@ -168,7 +235,7 @@ export function RuntimeList({
                   <span className="max-w-20 truncate">{selectedOwner.name}</span>
                 </>
               ) : (
-                <span>Owner</span>
+                <span>负责人</span>
               )}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
@@ -177,7 +244,7 @@ export function RuntimeList({
                 onClick={() => onOwnerFilterChange(null)}
                 className="flex items-center justify-between"
               >
-                <span className="text-xs">All owners</span>
+                <span className="text-xs">全部负责人</span>
                 {!ownerFilter && <Check className="h-3.5 w-3.5 text-foreground" />}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -204,14 +271,14 @@ export function RuntimeList({
         <div className="flex flex-col items-center justify-center px-4 py-12">
           <Server className="h-8 w-8 text-muted-foreground/40" />
           <p className="mt-3 text-sm text-muted-foreground">
-            {filter === "mine" ? "No runtimes owned by you" : ownerFilter ? "No runtimes for this owner" : "No runtimes registered"}
+            还没有执行环境
           </p>
           <p className="mt-1 text-xs text-muted-foreground text-center">
-            Run{" "}
+            运行{" "}
             <code className="rounded bg-muted px-1 py-0.5">
               multica daemon start
             </code>{" "}
-            to register a local runtime.
+            来注册本地执行环境。
           </p>
         </div>
       ) : (

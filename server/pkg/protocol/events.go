@@ -11,10 +11,10 @@ const (
 	EventCommentCreated       = "comment:created"
 	EventCommentUpdated       = "comment:updated"
 	EventCommentDeleted       = "comment:deleted"
-	EventReactionAdded          = "reaction:added"
-	EventReactionRemoved        = "reaction:removed"
-	EventIssueReactionAdded     = "issue_reaction:added"
-	EventIssueReactionRemoved   = "issue_reaction:removed"
+	EventReactionAdded        = "reaction:added"
+	EventReactionRemoved      = "reaction:removed"
+	EventIssueReactionAdded   = "issue_reaction:added"
+	EventIssueReactionRemoved = "issue_reaction:removed"
 
 	// Agent events
 	EventAgentStatus   = "agent:status"
@@ -66,6 +66,17 @@ const (
 	EventProjectCreated = "project:created"
 	EventProjectUpdated = "project:updated"
 	EventProjectDeleted = "project:deleted"
+
+	// Decision events
+	EventDecisionCreated           = "decision:created"
+	EventDecisionUpdated           = "decision:updated"
+	EventDecisionRecommended       = "decision:recommended"
+	EventDecisionApprovalSubmitted = "decision:approval_submitted"
+	EventDecisionApproved          = "decision:approved"
+	EventDecisionRejected          = "decision:rejected"
+	EventScenarioCreated           = "scenario:created"
+	EventActionExecuted            = "action:executed"
+	EventActionRolledBack          = "action:rolled_back"
 
 	// Pin events
 	EventPinCreated = "pin:created"

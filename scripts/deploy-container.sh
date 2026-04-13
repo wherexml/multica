@@ -1,6 +1,6 @@
 #!/bin/bash
 # Multica Container Deployment Script
-# Uses 41XXX port range by default
+# Uses 2220X port range by default
 
 set -e
 
@@ -36,10 +36,10 @@ if [ ! -f "$ENV_FILE" ]; then
     log_error "Environment file not found: $ENV_FILE"
     echo "Please copy from .env.example:"
     echo "  cp .env.example .env.container"
-    echo "Then edit the ports to use 41XXX range:"
-    echo "  POSTGRES_PORT=41500"
-    echo "  BACKEND_PORT=41501"
-    echo "  FRONTEND_PORT=41502"
+    echo "Then edit the ports to use 2220X range:"
+    echo "  POSTGRES_PORT=22200"
+    echo "  BACKEND_PORT=22201"
+    echo "  FRONTEND_PORT=22202"
     exit 1
 fi
 
@@ -53,9 +53,9 @@ echo "  Multica Container Deployment"
 echo "=========================================="
 echo ""
 echo "Services will be available at:"
-echo "  - PostgreSQL:  localhost:${POSTGRES_PORT:-41500}"
-echo "  - Backend API: http://localhost:${BACKEND_PORT:-41501}"
-echo "  - Frontend:    http://localhost:${FRONTEND_PORT:-41502}"
+echo "  - PostgreSQL:  localhost:${POSTGRES_PORT:-22200}"
+echo "  - Backend API: http://localhost:${BACKEND_PORT:-22201}"
+echo "  - Frontend:    http://localhost:${FRONTEND_PORT:-22202}"
 echo ""
 
 # Check if JWT_SECRET is still the default
@@ -91,7 +91,7 @@ docker_compose_cmd="docker compose -f ${PROJECT_DIR}/docker-compose.yml --env-fi
 log_info "Checking ports..."
 PORTS_IN_USE=""
 
-for port in "${POSTGRES_PORT:-41500}" "${BACKEND_PORT:-41501}" "${FRONTEND_PORT:-41502}"; do
+for port in "${POSTGRES_PORT:-22200}" "${BACKEND_PORT:-22201}" "${FRONTEND_PORT:-22202}"; do
     if ! check_port "$port"; then
         PORTS_IN_USE="$PORTS_IN_USE $port"
     fi
@@ -151,17 +151,46 @@ echo ""
 log_info "Checking service health..."
 
 # Check backend
-if curl -s http://localhost:"${BACKEND_PORT:-41501}"/health >/dev/null 2>&1; then
+if curl -s http://localhost:"${BACKEND_PORT:-22201}"/health >/dev/null 2>&1; then
     log_success "Backend is healthy"
 else
     log_warn "Backend health check failed (may still be starting)"
 fi
 
 # Check frontend
-if curl -s -o /dev/null -w "%{http_code}" http://localhost:"${FRONTEND_PORT:-41502}" | grep -q "200\|307"; then
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:"${FRONTEND_PORT:-22202}" | grep -q "200\|307"; then
     log_success "Frontend is responding"
 else
     log_warn "Frontend check failed (may still be starting)"
+fi
+
+# Seed admin user (optional)
+echo ""
+read -p "Do you want to seed the admin user (admin@local / admin123)? (Y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    log_info "Seeding admin user..."
+    
+    # Wait a bit for services to fully start
+    sleep 3
+    
+    # Run seed script against the container database
+    export POSTGRES_HOST=localhost
+    export POSTGRES_PORT="${POSTGRES_PORT:-22200}"
+    export POSTGRES_DB="${POSTGRES_DB:-multica}"
+    export POSTGRES_USER="${POSTGRES_USER:-multica}"
+    export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-multica}"
+    export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@local}"
+    export ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
+    export ADMIN_NAME="${ADMIN_NAME:-Admin}"
+    
+    if [ -f "${PROJECT_DIR}/scripts/seed-admin.sh" ]; then
+        bash "${PROJECT_DIR}/scripts/seed-admin.sh" || {
+            log_warn "Admin seeding failed (you can run 'make seed-admin' manually later)"
+        }
+    else
+        log_warn "seed-admin.sh not found. You can create the user manually through the registration page."
+    fi
 fi
 
 echo ""
@@ -170,9 +199,9 @@ log_success "Multica deployment complete!"
 echo "=========================================="
 echo ""
 echo "Access your services:"
-echo "  Frontend:    http://localhost:${FRONTEND_PORT:-41502}"
-echo "  Backend API: http://localhost:${BACKEND_PORT:-41501}"
-echo "  Health:      http://localhost:${BACKEND_PORT:-41501}/health"
+echo "  Frontend:    http://localhost:${FRONTEND_PORT:-22202}"
+echo "  Backend API: http://localhost:${BACKEND_PORT:-22201}"
+echo "  Health:      http://localhost:${BACKEND_PORT:-22201}/health"
 echo ""
 echo "Useful commands:"
 echo "  View logs:   docker compose -f docker-compose.yml --env-file .env.container logs -f"
@@ -180,6 +209,6 @@ echo "  Stop:        docker compose -f docker-compose.yml --env-file .env.contai
 echo "  Restart:     docker compose -f docker-compose.yml --env-file .env.container restart"
 echo ""
 echo "To configure the CLI/daemon, set:"
-echo "  export MULTICA_APP_URL=http://localhost:${FRONTEND_PORT:-41502}"
-echo "  export MULTICA_SERVER_URL=ws://localhost:${BACKEND_PORT:-41501}/ws"
+echo "  export MULTICA_APP_URL=http://localhost:${FRONTEND_PORT:-22202}"
+echo "  export MULTICA_SERVER_URL=ws://localhost:${BACKEND_PORT:-22201}/ws"
 echo ""

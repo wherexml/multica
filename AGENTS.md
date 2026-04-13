@@ -1,274 +1,220 @@
-# Repository Guidelines
+本文件为 agent提供**快速工作参考**。详细内容按需查阅下方文档索引。
 
-This file provides guidance to AI agents when working with code in this repository.
+---
 
-## Project Context
+## 工作准则
 
-Multica is an AI-native task management platform — like Linear, but with AI agents as first-class citizens.
+### Browser Automation
 
-- Agents can be assigned issues, create issues, comment, and change status
-- Supports local (daemon) and cloud agent runtimes
-- Built for 2-10 person AI-native teams
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands。所有浏览器任务必须跑在 subagent 里执行，严禁直接执行。
 
-## Architecture
+Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapshot
 
-**Go backend + standalone Next.js frontend.**
+### 核心原则
 
-- `server/` — Go backend (Chi router, sqlc for DB, gorilla/websocket for real-time)
-- `apps/web/` — Next.js 16 frontend (App Router) — self-contained, no shared package dependencies
-- `e2e/` — Playwright end-to-end tests
-- `scripts/` and root `Makefile` — local setup and verification
+1. **Plan Node Default** — 非平凡任务（3+ 步骤或架构决策）必须 Enter plan mode；遇到问题立即 STOP re-plan
+2. **Subagent Strategy** — 大量使用 subagent 保持主 context 干净；复杂问题多分配 subagent
+3. **Self-Improvement Loop** — 每次被纠正后更新 `tasks/lessons.md`，session 开始时回顾
+4. **Verification Before Done** — 不证明工作就不标记完成；运行 `make check`
+5. **Demand Elegance** — 非平凡变更先问"有没有更优雅的方式"；简单修复不要过度工程
+6. **Autonomous Bug Fixing** — 修复 bug 尽量用 codeagent-wrapper codex subagent（gpt-5.4 最高级别）；零 hand-holding
 
-### Web App Structure (`apps/web/`)
+### Task Management
 
-The frontend uses a **feature-based architecture** with four layers:
+1. Plan → `tasks/todo.md`（checkable items）→ 确认后再实施
+2. 逐步标记完成，每步附简要说明
+3. 完成后写 review section，纠正后更新 `tasks/lessons.md`
 
-```
-apps/web/
-├── app/          # Routing layer (thin shells — import from features/)
-├── features/     # Business logic, organized by domain
-├── shared/       # Cross-feature utilities (api client, types, logger)
-├── test/         # Shared test utilities and setup
-├── public/       # Static assets
-```
+---
 
-**`app/`** — Next.js App Router pages. Route files should be thin: import and re-export from `features/`. Layout components and route-specific glue (redirects, auth guards) live here. Shared layout components (e.g. `app-sidebar`) stay in `app/(dashboard)/_components/`.
+## 项目背景
 
-**`features/`** — Domain modules, each with its own components, hooks, stores, and config:
+**Multica** — AI 原生任务管理平台（类 Linear，AI Agent 是第一等公民）。目标用户：2-10 人 AI 原生团队。
 
-| Feature | Purpose | Exports |
-|---|---|---|
-| `features/auth/` | Authentication state | `useAuthStore`, `AuthInitializer` |
-| `features/workspace/` | Workspace, members, agents | `useWorkspaceStore`, `useActorName` |
-| `features/issues/` | Issue state, components, config | `useIssueStore`, icons, pickers, status/priority config |
-| `features/inbox/` | Inbox notification state | `useInboxStore` |
-| `features/realtime/` | WebSocket connection + sync | `WSProvider`, `useWSEvent`, `useRealtimeSync` |
-| `features/modals/` | Modal registry and state | Modal store and components |
-| `features/skills/` | Skill management | Skill components |
+## 技术架构
 
-**`shared/`** — Code used across multiple features:
-- `shared/api/` — `ApiClient` (REST) and `WSClient` (WebSocket) for backend communication, plus the `api` singleton.
-- `shared/types/` — Domain types (Issue, Agent, Workspace, etc.) and WebSocket event types.
-- `shared/logger.ts` — Logger utility.
+**Go 后端 + Next.js 前端。**
 
-### State Management
+| 目录 | 技术栈 | 作用 |
+| --- | --- | --- |
+| `server/` | Go (Chi + sqlc + gorilla/websocket) | 后端 API |
+| `apps/web/` | Next.js 16 (App Router) | 前端，完全自包含 |
 
-- **Zustand** for global client state — one store per feature domain (`features/auth/store.ts`, `features/workspace/store.ts`, `features/issues/store.ts`, `features/inbox/store.ts`).
-- **React Context** only for connection lifecycle (`WSProvider` in `features/realtime/`).
-- **Local `useState`** for component-scoped UI state (forms, modals, filters).
-- Do not use React Context for data that can be a zustand store.
+> **详细架构** → [ARCHITECTURE.md](./ARCHITECTURE.md)（系统架构图、后端完整结构、前端 Store 依赖图、数据库 ER 图、事件系统、部署细节）
 
-**Store conventions:**
-- One store per feature domain. Import via `useAuthStore(selector)` or `useWorkspaceStore(selector)`.
-- Stores must not call `useRouter` or any React hooks — keep navigation in components.
-- Cross-store reads use `useOtherStore.getState()` inside actions (not hooks).
-- Dependency direction: `workspace` → `auth`, `realtime` → `auth`, `issues` → `workspace`. Never reverse.
+## 前端架构速查
 
-### Import Aliases
+三层特性优先架构：`app/`（路由层，薄壳）→ `features/`（业务模块）→ `shared/`（跨模块公共）
 
-Use `@/` alias (maps to `apps/web/`):
-```typescript
-import { api } from "@/shared/api";
-import type { Issue } from "@/shared/types";
-import { useAuthStore } from "@/features/auth";
-import { useWorkspaceStore } from "@/features/workspace";
-import { useIssueStore } from "@/features/issues";
-import { useInboxStore } from "@/features/inbox";
-import { useWSEvent } from "@/features/realtime";
-import { StatusIcon } from "@/features/issues/components";
-```
+| 特性模块 | 职责 |
+| --- | --- |
+| `features/auth/` | 认证状态（`useAuthStore`、`AuthInitializer`） |
+| `features/workspace/` | 工作区、成员、Agent（`useWorkspaceStore`） |
+| `features/issues/` | Issue 状态与组件（`useIssueStore`） |
+| `features/inbox/` | 收件箱通知（`useInboxStore`） |
+| `features/realtime/` | WebSocket 连接（`WSProvider`、`useWSEvent`） |
+| `features/modals/` | 弹窗注册与状态 |
+| `features/skills/` | AI Skill 管理 |
 
-Within a feature, use relative imports. Between features or to shared, use `@/`.
+**状态管理**：Zustand（全局） / React Context（仅生命周期） / useState（本地 UI）
 
-### Data Flow
+**Store 规范**：每领域一个 store（selector 调用）；Store 禁止调用 hooks；依赖方向 `workspace → auth`、`realtime → auth`、`issues → workspace`（禁止反向）
 
-```
-Browser → ApiClient (shared/api) → REST API (Chi handlers) → sqlc queries → PostgreSQL
-Browser ← WSClient (shared/api) ← WebSocket ← Hub.Broadcast() ← Handlers/TaskService
-```
+**导入别名**：跨特性用 `@/`，同模块内用相对路径
 
-### Backend Structure (`server/`)
+**数据流**：`浏览器 → ApiClient → REST API → sqlc → PostgreSQL` / `浏览器 ← WSClient ← WebSocket ← Hub.Broadcast()`
 
-- **Entry points** (`cmd/`): `server` (HTTP API), `multica` (CLI — daemon, agent management, config), `migrate`
-- **Handlers** (`internal/handler/`): One file per domain (issue, comment, agent, auth, daemon, etc.). Each handler holds `Queries`, `DB`, `Hub`, and `TaskService`.
-- **Real-time** (`internal/realtime/`): Hub manages WebSocket clients. Server broadcasts events; inbound WS message routing is still TODO.
-- **Auth** (`internal/auth/` + `internal/middleware/`): JWT (HS256). Middleware sets `X-User-ID` and `X-User-Email` headers. Login creates user on-the-fly if not found.
-- **Task lifecycle** (`internal/service/task.go`): Orchestrates agent work — enqueue → claim → start → complete/fail. Syncs issue status automatically and broadcasts WS events at each transition.
-- **Agent SDK** (`pkg/agent/`): Unified `Backend` interface for executing prompts via Claude Code or Codex. Each backend spawns its CLI and streams results via `Session.Messages` + `Session.Result` channels.
-- **Daemon** (`internal/daemon/`): Local agent runtime — auto-detects available CLIs (claude, codex), registers runtimes, polls for tasks, routes by provider.
-- **CLI** (`internal/cli/`): Shared helpers for the `multica` CLI — API client, config management, output formatting.
-- **Events** (`internal/events/`): Internal event bus for decoupled communication between handlers and services.
-- **Logging** (`internal/logger/`): Structured logging via slog. `LOG_LEVEL` env var controls level (debug, info, warn, error).
-- **Database**: PostgreSQL with pgvector extension (`pgvector/pgvector:pg17`). sqlc generates Go code from SQL in `pkg/db/queries/` → `pkg/db/generated/`. Migrations in `migrations/`.
-- **Routes** (`cmd/server/router.go`): Public routes (auth, health, ws) + protected routes (require JWT) + daemon routes (unauthenticated, separate auth model).
+> **完整前端文档** → [frontend.md](./frontend.md)
 
-### Multi-tenancy
+## 后端架构速查
 
-All queries filter by `workspace_id`. Membership checks gate access. `X-Workspace-ID` header routes requests to the correct workspace.
+| 目录 | 核心文件 | 职责 |
+| --- | --- | --- |
+| `cmd/server/` | `main.go`、`router.go` | 启动入口、路由定义 |
+| `internal/handler/` | `<domain>.go` | 每域一个 handler |
+| `internal/service/` | `task.go` | TaskService 编排 |
+| `internal/realtime/` | `hub.go` | WebSocket Hub |
+| `internal/events/` | `bus.go` | 内存 pub/sub |
+| `pkg/agent/` | `claude.go` 等 | Agent Backend 接口 |
+| `internal/daemon/` | `daemon.go` 等 | 本地 Agent 运行时 |
 
-### Agent Assignees
+路由类型：Public（`/auth/*`、`/health`、`/ws`）/ Protected（`/api/*` JWT）/ Daemon（`/api/daemon/*`）
 
-Assignees are polymorphic — can be a member or an agent. `assignee_type` + `assignee_id` on issues. Agents render with distinct styling (purple background, robot icon).
+> **完整后端文档** → [backend.md](./backend.md)
 
-## Commands
+## 多租户
+
+所有查询按 `workspace_id` 过滤，`X-Workspace-ID` header 指定工作区。
+
+## Agent 负责人
+
+多态：成员或 Agent。`assignee_type` + `assignee_id` 区分。Agent UI 有紫色背景 + 机器人图标。
+
+---
+
+## 常用命令
 
 ```bash
-# One-click setup & run
-make setup            # First-time: ensure shared DB, create app DB, migrate
-make start            # Start backend + frontend together
-make stop             # Stop app processes for the current checkout
-make db-down          # Stop the shared PostgreSQL container
+# 一键启动
+make setup            # 首次：DB + 迁移
+make start            # 同时启动后端 + 前端
+make stop             # 停止
 
-# Frontend
-pnpm install
-pnpm dev:web          # Next.js dev server (port 3000)
-pnpm build            # Build frontend
-pnpm typecheck        # TypeScript check
-pnpm lint             # ESLint via Next.js
-pnpm test             # TS tests (Vitest)
+# 前端
+pnpm dev:web          # Next.js dev（端口 3000）
+pnpm build / typecheck / lint / test
 
-# Backend (Go)
-make dev              # Run Go server (port 8080)
-make daemon           # Run local daemon
-make build            # Build server + CLI binaries to server/bin/
-make cli ARGS="..."   # Run multica CLI (e.g. make cli ARGS="config")
-make test             # Go tests
-make sqlc             # Regenerate sqlc code after editing SQL in server/pkg/db/queries/
-make migrate-up       # Run database migrations
-make migrate-down     # Rollback migrations
+# 后端
+make dev              # Go 服务器（端口 8080）
+make test             # Go 测试
+make sqlc             # SQL 改动后重新生成
 
-# Run a single Go test
+# 数据库
+make db-up / db-down  # PostgreSQL 容器
+make migrate-up / migrate-down
+
+# 单个测试
 cd server && go test ./internal/handler/ -run TestName
-
-# Run a single TS test
 pnpm --filter @multica/web exec vitest run src/path/to/file.test.ts
-
-# Run a single E2E test (requires backend + frontend running)
-pnpm exec playwright test e2e/tests/specific-test.spec.ts
-
-# Infrastructure
-make db-up            # Start shared PostgreSQL (pgvector/pg17 image)
-make db-down          # Stop shared PostgreSQL
 ```
 
-### CI Requirements
-
-CI runs on Node 22 and Go 1.24 with a `pgvector/pgvector:pg17` PostgreSQL service. See `.github/workflows/ci.yml`.
-
-### Worktree Support
-
-All checkouts share one PostgreSQL container. Isolation is at the database level — each worktree gets its own DB name and unique ports via `.env.worktree`. Main checkouts use `.env`.
+## 提交前检查
 
 ```bash
-make worktree-env       # Generate .env.worktree with unique DB/ports
-make setup-worktree     # Setup using .env.worktree
-make start-worktree     # Start using .env.worktree
+make check            # 全部：类型检查 + 单元测试 + Go 测试 + E2E
 ```
 
-## Coding Rules
+只有用户明确要求时才执行验证。快速迭代可先跑单步检查。
 
-- TypeScript strict mode is enabled; keep types explicit.
-- TypeScript in `apps/web` uses 2-space indentation, double quotes, and semicolons.
-- Prefer PascalCase for React components, camelCase for hooks and helpers, and colocated test files such as `page.test.tsx`.
-- Go code follows standard Go conventions (gofmt, go vet). Use domain-oriented filenames like `issue.go` or `cmd_issue.go`.
-- Do not hand-edit generated code in `server/pkg/db/generated/`.
-- Keep comments in code **English only**.
-- Prefer existing patterns/components over introducing parallel abstractions.
-- Unless the user explicitly asks for backwards compatibility, do **not** add compatibility layers, fallback paths, dual-write logic, legacy adapters, or temporary shims.
-- If a flow or API is being replaced and the product is not yet live, prefer removing the old path instead of preserving both old and new behavior.
-- Treat compatibility code as a maintenance cost, not a default safety mechanism. Avoid "just in case" branches that make the codebase harder to reason about.
-- Avoid broad refactors unless required by the task.
+---
 
-## UI/UX Rules
+## 代码规范
 
-- Prefer shadcn components over custom implementations. Install missing components via `npx shadcn add`.
-- **Feature-specific components** → `features/<domain>/components/` — issue icons, pickers, and other domain-bound UI live inside their feature module.
-- Use shadcn design tokens for styling (e.g. `bg-primary`, `text-muted-foreground`, `text-destructive`). Avoid hardcoded color values (e.g. `text-red-500`, `bg-gray-100`).
-- Do not introduce extra state (useState, context, reducers) unless explicitly required by the design. Prefer zustand stores for shared state over React Context.
-- Pay close attention to **overflow** (truncate long text, scrollable containers), **alignment**, and **spacing** consistency.
-- When unsure about interaction or state design, ask — the user will provide direction.
+- TypeScript 严格模式，Go 遵循 gofmt/go vet
+- **代码注释必须使用英文**
+- 优先使用已有模式/组件，不引入平行抽象
+- **禁止**添加兼容层、fallback 路径、双写逻辑（除非用户明确要求）
+- 提交格式：`feat(scope):` / `fix(scope):` / `refactor(scope):` / `docs:` / `test(scope):` / `chore(scope):`
 
-## Testing Rules
+## UI/UX 规范
 
-- **TypeScript**: Vitest with Testing Library. Shared test setup lives in `apps/web/test/`. Mock external/third-party dependencies only.
-- **Go**: Standard `go test`. Tests should create their own fixture data in a test database.
-- End-to-end tests live in `e2e/*.spec.ts`; `make check` will start missing services automatically, while direct Playwright runs expect the app to already be running.
-- Add or update tests whenever you change handlers, CLI commands, daemon behavior, or SQL-backed flows.
+- 优先 shadcn 组件（`npx shadcn add` 安装）
+- 使用 shadcn design token（`bg-primary` 等），**禁止**硬编码颜色值
+- 特性专属组件放 `features/<domain>/components/`
+- 注意 overflow、对齐、间距一致性
 
-## Commit & Pull Request Rules
+## 测试规范
 
-- Use atomic commits grouped by logical intent.
-- Conventional format with scopes:
-  - `feat(web): ...`, `feat(cli): ...`
-  - `fix(web): ...`, `fix(cli): ...`
-  - `refactor(daemon): ...`
-  - `test(cli): ...`
-  - `docs: ...`
-  - `chore(scope): ...`
-- Keep PRs focused and include a short description, linked issue or PR number when relevant, screenshots for UI work, and notes for migrations, env changes, or CLI surface changes.
-- Before opening a PR, run `make check` or the relevant frontend/backend subset.
+- **TypeScript**：Vitest，只 mock 外部/第三方依赖
+- **Go**：标准 `go test`，自建 fixture 数据
+- **E2E**：自包含，用 `TestApiClient` fixture 准备/清理数据
 
-## Minimum Pre-Push Checks
+## CLI 发版
+
+打 tag → push → GitHub Actions 自动构建：`git tag v0.x.x && git push origin v0.x.x`
+
+---
+
+## 文档索引（渐进式披露）
+
+按需深入，避免一次加载所有信息：
+
+| 文档 | 内容 |
+| --- | --- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 完整架构：系统图、后端结构、前端 Store 依赖图、数据库 ER、事件系统 |
+| [frontend.md](./frontend.md) | 前端详细文档：组件体系、路由、状态管理、数据流 |
+| [backend.md](./backend.md) | 后端详细文档：Handler/Service/EventBus/Agent SDK/Daemon |
+| [database.md](./database.md) | 数据库：表结构、迁移、sqlc 用法 |
+| [api_contract.md](./api_contract.md) | API 契约：REST + WebSocket 接口定义 |
+| [design.md](./design.md) | 设计决策与 UI/UX 规范详解 |
+| [deployment.md](./deployment.md) | 部署：Docker Compose、环境变量、端口配置 |
+| [CLI_AND_DAEMON.md](./CLI_AND_DAEMON.md) | CLI 使用与 Agent Daemon 完整指南 |
+| [CLI_INSTALL.md](./CLI_INSTALL.md) | CLI 安装指南（AI Agent 可执行版） |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献流程：首次设置、开发工作流、worktree、测试 |
+| [SELF_HOSTING.md](./SELF_HOSTING.md) | 自部署快速指南 |
+| [SELF_HOSTING_ADVANCED.md](./SELF_HOSTING_ADVANCED.md) | 自部署高级配置（环境变量、TLS、OAuth） |
+| [SELF_HOSTING_AI.md](./SELF_HOSTING_AI.md) | AI Agent 自部署指南（一键安装） |
+| [DEPLOY_CONTAINER.md](./DEPLOY_CONTAINER.md) | 容器化部署指南（端口、环境变量、故障排除） |
+| [local_modify.md](./local_modify.md) | 本地修改记录（相对上游的 diff） |
+
+### 何时查阅哪个文档
+
+| 场景 | 查阅 |
+| --- | --- |
+| 理解系统全貌 | ARCHITECTURE.md |
+| 改前端代码 | frontend.md → ARCHITECTURE.md 的前端章节 |
+| 改后端代码 | backend.md → ARCHITECTURE.md 的后端章节 |
+| 改数据库 | database.md |
+| 加/改 API | api_contract.md |
+| 部署相关 | deployment.md → DEPLOY_CONTAINER.md |
+| CLI/Daemon 问题 | CLI_AND_DAEMON.md |
+| 上游同步 | local_modify.md |
+
+---
+
+## CI 环境
+
+Node 22 + Go 1.26.1，`pgvector/pgvector:pg17` PostgreSQL。详见 `.github/workflows/ci.yml`。
+
+## Worktree 支持
+
+共享 PostgreSQL 容器，DB 层面隔离。`make worktree-env` → `make setup-worktree` → `make start-worktree`
+
+## 同步上游仓库
 
 ```bash
-make check    # Runs all checks: typecheck, unit tests, Go tests, E2E
+git remote add upstream https://github.com/multica-ai/multica  # 一次性
+git fetch upstream main && git stash && git merge upstream/main && git stash pop
+# pnpm-lock.yaml 冲突：git checkout upstream/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile
 ```
 
-Run verification only when the user explicitly asks for it.
+## 本地修改记录
 
-For targeted checks when requested:
-```bash
-pnpm typecheck        # TypeScript type errors only
-pnpm test             # TS unit tests only (Vitest)
-make test             # Go tests only
-pnpm exec playwright test   # E2E only (requires backend + frontend running)
-```
+> 详见 [local_modify.md](./local_modify.md)
 
-## AI Agent Verification Loop
+核心要点：
 
-After writing or modifying code, always run the full verification pipeline:
-
-```bash
-make check
-```
-
-This runs all checks in sequence:
-1. TypeScript typecheck (`pnpm typecheck`)
-2. TypeScript unit tests (`pnpm test`)
-3. Go tests (`go test ./...`)
-4. E2E tests (auto-starts backend + frontend if needed, runs Playwright)
-
-**Workflow:**
-- Write code to satisfy the requirement
-- Run `make check`
-- If any step fails, read the error output, fix the code, and re-run `make check`
-- Repeat until all checks pass
-- Only then consider the task complete
-
-**Quick iteration:** If you know only TypeScript or Go is affected, run individual checks first for faster feedback, then finish with a full `make check` before marking work complete.
-
-## E2E Test Patterns
-
-E2E tests should be self-contained. Use the `TestApiClient` fixture for data setup/teardown:
-
-```typescript
-import { loginAsDefault, createTestApi } from "./helpers";
-import type { TestApiClient } from "./fixtures";
-
-let api: TestApiClient;
-
-test.beforeEach(async ({ page }) => {
-  api = await createTestApi();       // logged-in API client
-  await loginAsDefault(page);        // browser session
-});
-
-test.afterEach(async () => {
-  await api.cleanup();               // delete any data created during the test
-});
-
-test("example", async ({ page }) => {
-  const issue = await api.createIssue("Test Issue");  // create via API
-  await page.goto(`/issues/${issue.id}`);             // test via UI
-  // api.cleanup() in afterEach removes the issue
-});
-```
+- 本地添加了**密码认证**（邮箱+密码登录/注册），上游用 Google OAuth + 验证码
+- 登录页 `apps/web/app/(auth)/login/page.tsx` 是本地完全重写，**不要恢复为上游版本**
+- 容器部署端口 222XX 范围，可能与上游不同
+- 同步 `server/go.mod` 后需 `go get golang.org/x/crypto`

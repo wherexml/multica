@@ -17,11 +17,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
+import {
+  t,
+} from "@multica/core/platform";
 import type { SearchIssueResult, SearchProjectResult } from "@multica/core/types";
 import { api } from "@multica/core/api";
 import { useRecentIssuesStore } from "@multica/core/issues/stores";
 import { StatusIcon } from "../issues/components";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
+import { STATUS_CONFIG, getIssueStatusLabel } from "@multica/core/issues/config";
 import { PROJECT_STATUS_CONFIG } from "@multica/core/projects/config";
 import type { ProjectStatus } from "@multica/core/types";
 import {
@@ -77,23 +80,14 @@ interface NavPage {
   keywords: string[];
 }
 
-const navPages: NavPage[] = [
-  { href: "/inbox", label: "Inbox", icon: Inbox, keywords: ["inbox", "notifications"] },
-  { href: "/my-issues", label: "My Issues", icon: CircleUser, keywords: ["my", "issues", "assigned"] },
-  { href: "/issues", label: "Issues", icon: ListTodo, keywords: ["issues", "tasks", "bugs"] },
-  { href: "/projects", label: "Projects", icon: FolderKanban, keywords: ["projects", "kanban"] },
-  { href: "/agents", label: "Agents", icon: Bot, keywords: ["agents", "bots", "ai"] },
-  { href: "/runtimes", label: "Runtimes", icon: Monitor, keywords: ["runtimes", "environments"] },
-  { href: "/skills", label: "Skills", icon: BookOpenText, keywords: ["skills", "library"] },
-  { href: "/settings", label: "Settings", icon: Settings, keywords: ["settings", "config", "preferences"] },
-];
-
 interface SearchResults {
   issues: SearchIssueResult[];
   projects: SearchProjectResult[];
 }
 
 export function SearchCommand() {
+  const locale = "zh-CN";
+  const isZh = true;
   const { push } = useNavigation();
   const open = useSearchStore((s) => s.open);
   const setOpen = useSearchStore((s) => s.setOpen);
@@ -103,6 +97,59 @@ export function SearchCommand() {
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const navPages: NavPage[] = useMemo(
+    () => [
+      {
+        href: "/inbox",
+        label: t("inbox", locale),
+        icon: Inbox,
+        keywords: isZh ? ["工作台", "通知", "消息"] : ["inbox", "notifications"],
+      },
+      {
+        href: "/my-issues",
+        label: t("myIssues", locale),
+        icon: CircleUser,
+        keywords: isZh ? ["我的", "待办", "分配"] : ["my", "issues", "assigned"],
+      },
+      {
+        href: "/issues",
+        label: t("issuesCenter", locale),
+        icon: ListTodo,
+        keywords: isZh ? ["决策单", "任务", "问题"] : ["issues", "tasks", "bugs"],
+      },
+      {
+        href: "/projects",
+        label: t("projectsCenter", locale),
+        icon: FolderKanban,
+        keywords: isZh ? ["项目", "专题", "看板"] : ["projects", "kanban"],
+      },
+      {
+        href: "/agents",
+        label: t("agent", locale),
+        icon: Bot,
+        keywords: isZh ? ["专家", "智能体", "Agent"] : ["agents", "bots", "ai"],
+      },
+      {
+        href: "/runtimes",
+        label: t("runtime", locale),
+        icon: Monitor,
+        keywords: isZh ? ["执行环境", "运行时"] : ["runtimes", "environments"],
+      },
+      {
+        href: "/skills",
+        label: t("skill", locale),
+        icon: BookOpenText,
+        keywords: isZh ? ["技能", "技能包", "能力"] : ["skills", "library"],
+      },
+      {
+        href: "/settings",
+        label: t("settings", locale),
+        icon: Settings,
+        keywords: isZh ? ["设置", "配置", "偏好"] : ["settings", "config", "preferences"],
+      },
+    ],
+    [isZh, locale],
+  );
 
   const filteredPages = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -112,7 +159,7 @@ export function SearchCommand() {
         page.label.toLowerCase().includes(q) ||
         page.keywords.some((kw) => kw.includes(q)),
     );
-  }, [query]);
+  }, [navPages, query]);
 
   const hasResults = results.issues.length > 0 || results.projects.length > 0;
 
@@ -237,10 +284,10 @@ export function SearchCommand() {
         className="top-[20%] translate-y-0 overflow-hidden rounded-xl! p-0 sm:max-w-xl!"
         showCloseButton={false}
       >
-        <DialogHeader className="sr-only">
-          <DialogTitle>Search</DialogTitle>
+          <DialogHeader className="sr-only">
+          <DialogTitle>{isZh ? "搜索" : "Search"}</DialogTitle>
           <DialogDescription>
-            Search pages, issues, and projects
+            {isZh ? "搜索页面、决策单和项目" : "Search pages, issues, and projects"}
           </DialogDescription>
         </DialogHeader>
         <CommandPrimitive
@@ -251,7 +298,7 @@ export function SearchCommand() {
           <div className="flex items-center gap-3 border-b px-4 py-3">
             <SearchIcon className="size-5 shrink-0 text-muted-foreground" />
             <CommandPrimitive.Input
-              placeholder="Type a command or search..."
+              placeholder={isZh ? "输入关键词进行搜索..." : "Type a command or search..."}
               value={query}
               onValueChange={handleValueChange}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -267,7 +314,7 @@ export function SearchCommand() {
             {filteredPages.length > 0 && (
               <CommandPrimitive.Group className="p-2">
                 <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  Pages
+                  {isZh ? "页面" : "Pages"}
                 </div>
                 {filteredPages.map((page) => (
                   <CommandPrimitive.Item
@@ -293,13 +340,13 @@ export function SearchCommand() {
 
             {!isLoading && query.trim() && !hasResults && filteredPages.length === 0 && (
               <CommandPrimitive.Empty className="py-10 text-center text-sm text-muted-foreground">
-                No results found.
+                {isZh ? "没有找到结果。" : "No results found."}
               </CommandPrimitive.Empty>
             )}
 
             {!isLoading && results.projects.length > 0 && (
               <CommandPrimitive.Group
-                heading="Projects"
+                heading={isZh ? "项目" : "Projects"}
                 className="p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {results.projects.map((project) => (
@@ -340,7 +387,7 @@ export function SearchCommand() {
 
             {!isLoading && results.issues.length > 0 && (
               <CommandPrimitive.Group
-                heading="Issues"
+                heading={isZh ? "决策单" : "Issues"}
                 className="p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {results.issues.map((issue) => (
@@ -364,7 +411,7 @@ export function SearchCommand() {
                       <span
                         className={`ml-auto text-xs shrink-0 ${STATUS_CONFIG[issue.status].iconColor}`}
                       >
-                        {STATUS_CONFIG[issue.status].label}
+                        {getIssueStatusLabel(issue.status, locale)}
                       </span>
                     </div>
                     {issue.match_source === "comment" &&
@@ -388,7 +435,7 @@ export function SearchCommand() {
               <CommandPrimitive.Group className="p-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground">
                   <Clock className="size-3" />
-                  <span>Recent</span>
+                  <span>{isZh ? "最近访问" : "Recent"}</span>
                 </div>
                 {recentIssues.map((item) => (
                   <CommandPrimitive.Item
@@ -408,7 +455,7 @@ export function SearchCommand() {
                     <span
                       className={`ml-auto text-xs shrink-0 ${STATUS_CONFIG[item.status]?.iconColor ?? ""}`}
                     >
-                      {STATUS_CONFIG[item.status]?.label ?? ""}
+                      {item.status ? getIssueStatusLabel(item.status, locale) : ""}
                     </span>
                   </CommandPrimitive.Item>
                 ))}
@@ -417,8 +464,14 @@ export function SearchCommand() {
 
             {!isLoading && !query.trim() && recentIssues.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
-                <span>Type to search issues and projects...</span>
-                <span className="text-xs">Press <kbd className="rounded bg-muted px-1.5 py-0.5 font-medium">⌘K</kbd> to open this anytime</span>
+                <span>
+                  {isZh ? "输入关键词搜索决策单和项目..." : "Type to search issues and projects..."}
+                </span>
+                <span className="text-xs">
+                  {isZh ? "按 " : "Press "}
+                  <kbd className="rounded bg-muted px-1.5 py-0.5 font-medium">⌘K</kbd>
+                  {isZh ? " 可随时打开搜索" : " to open this anytime"}
+                </span>
               </div>
             )}
           </CommandPrimitive.List>

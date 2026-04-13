@@ -9,6 +9,7 @@ import { PROJECT_STATUS_CONFIG, PROJECT_STATUS_ORDER, PROJECT_PRIORITY_CONFIG, P
 import { useWorkspaceId } from "@multica/core/hooks";
 import { useWorkspaceStore } from "@multica/core/workspace";
 import { memberListOptions, agentListOptions } from "@multica/core/workspace/queries";
+import { t } from "@multica/core/platform";
 import { AppLink, useNavigation } from "../../navigation";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { useActorName } from "@multica/core/workspace/hooks";
@@ -36,17 +37,19 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import { ContentEditor, type ContentEditorRef } from "../../editor";
 import { TitleEditor } from "../../editor";
 import { EmojiPicker } from "@multica/ui/components/common/emoji-picker";
+import { Card, CardDescription, CardHeader, CardTitle } from "@multica/ui/components/ui/card";
 import type { Project, ProjectStatus, ProjectPriority, UpdateProjectRequest } from "@multica/core/types";
 import { PriorityIcon } from "../../issues/components/priority-icon";
+import { TOPIC_TEMPLATES, getTopicTemplateById } from "./topic-templates";
 
 function formatRelativeDate(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days < 1) return "Today";
-  if (days === 1) return "1d ago";
-  if (days < 30) return `${days}d ago`;
+  if (days < 1) return "今天";
+  if (days === 1) return "1天前";
+  if (days < 30) return `${days}天前`;
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  return `${months}个月前`;
 }
 
 function ProjectRow({ project }: { project: Project }) {
@@ -167,7 +170,7 @@ function ProjectRow({ project }: { project: Project }) {
               type="text"
               value={leadFilter}
               onChange={(e) => setLeadFilter(e.target.value)}
-              placeholder="Assign lead..."
+              placeholder="搜索负责人..."
               className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
             />
           </div>
@@ -178,11 +181,11 @@ function ProjectRow({ project }: { project: Project }) {
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
             >
               <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">No lead</span>
+              <span className="text-muted-foreground">未设置负责人</span>
             </button>
             {filteredMembers.length > 0 && (
               <>
-                <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Members</div>
+                <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">成员</div>
                 {filteredMembers.map((m) => (
                   <button
                     type="button"
@@ -198,7 +201,7 @@ function ProjectRow({ project }: { project: Project }) {
             )}
             {filteredAgents.length > 0 && (
               <>
-                <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Agents</div>
+                <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("agent")}</div>
                 {filteredAgents.map((a) => (
                   <button
                     type="button"
@@ -213,7 +216,7 @@ function ProjectRow({ project }: { project: Project }) {
               </>
             )}
             {filteredMembers.length === 0 && filteredAgents.length === 0 && leadFilter && (
-              <div className="px-2 py-3 text-center text-sm text-muted-foreground">No results</div>
+              <div className="px-2 py-3 text-center text-sm text-muted-foreground">暂无匹配结果</div>
             )}
           </div>
         </PopoverContent>
@@ -265,6 +268,9 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [editorSeed, setEditorSeed] = useState(0);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
 
   // Lead popover
   const [leadOpen, setLeadOpen] = useState(false);
@@ -275,9 +281,52 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const filteredAgents = agents.filter((a) => !a.archived_at && a.name.toLowerCase().includes(leadQuery));
 
   const leadLabel =
-    leadType && leadId ? getActorName(leadType, leadId) : "Lead";
+    leadType && leadId ? getActorName(leadType, leadId) : "负责人";
 
   const createProject = useCreateProject();
+
+  const resetDraft = useCallback(() => {
+    setTitle("");
+    setDescriptionDraft("");
+    setIcon(undefined);
+    setStatus("planned");
+    setPriority("none");
+    setLeadType(undefined);
+    setLeadId(undefined);
+    setLeadFilter("");
+    setSelectedTemplateId(null);
+    setIsExpanded(false);
+    setEditorSeed((seed) => seed + 1);
+  }, []);
+
+  const handleDialogOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      onOpenChange(nextOpen);
+      if (!nextOpen) {
+        resetDraft();
+      }
+    },
+    [onOpenChange, resetDraft],
+  );
+
+  const clearTemplate = useCallback(() => {
+    setTitle("");
+    setDescriptionDraft("");
+    setPriority("none");
+    setSelectedTemplateId(null);
+    setEditorSeed((seed) => seed + 1);
+  }, []);
+
+  const applyTemplate = useCallback((templateId: string) => {
+    const template = getTopicTemplateById(templateId);
+    if (!template) return;
+
+    setSelectedTemplateId(template.id);
+    setTitle(template.name);
+    setDescriptionDraft(template.description);
+    setPriority(template.priority);
+    setEditorSeed((seed) => seed + 1);
+  }, []);
 
   const handleSubmit = async () => {
     if (!title.trim() || submitting) return;
@@ -292,24 +341,18 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
         lead_type: leadType,
         lead_id: leadId,
       });
-      onOpenChange(false);
-      setTitle("");
-      setIcon(undefined);
-      setStatus("planned");
-      setPriority("none");
-      setLeadType(undefined);
-      setLeadId(undefined);
-      toast.success("Project created");
+      handleDialogOpenChange(false);
+      toast.success("专题已创建");
       router.push(`/projects/${project.id}`);
     } catch {
-      toast.error("Failed to create project");
+      toast.error("创建专题失败");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         showCloseButton={false}
         className={cn(
@@ -321,14 +364,14 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
             : "!max-w-2xl !w-full !h-96 !-translate-y-1/2",
         )}
       >
-        <DialogTitle className="sr-only">New Project</DialogTitle>
+        <DialogTitle className="sr-only">新建专题</DialogTitle>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0">
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">{workspaceName}</span>
             <ChevronRight className="size-3 text-muted-foreground/50" />
-            <span className="font-medium">New project</span>
+            <span className="font-medium">新建专题</span>
           </div>
           <div className="flex items-center gap-1">
             <Tooltip>
@@ -342,20 +385,20 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   </button>
                 }
               />
-              <TooltipContent side="bottom">{isExpanded ? "Collapse" : "Expand"}</TooltipContent>
+              <TooltipContent side="bottom">{isExpanded ? "收起" : "展开"}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 render={
                   <button
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => handleDialogOpenChange(false)}
                     className="rounded-sm p-1.5 opacity-70 hover:opacity-100 hover:bg-accent/60 transition-all cursor-pointer"
                   >
                     <XIcon className="size-4" />
                   </button>
                 }
               />
-              <TooltipContent side="bottom">Close</TooltipContent>
+              <TooltipContent side="bottom">关闭</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -368,7 +411,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 <button
                   type="button"
                   className="text-2xl cursor-pointer rounded-lg p-1 -ml-1 hover:bg-accent/60 transition-colors"
-                  title="Choose icon"
+                  title="选择图标"
                 >
                   {icon || "📁"}
                 </button>
@@ -384,9 +427,10 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
             </PopoverContent>
           </Popover>
           <TitleEditor
+            key={`create-topic-title-${editorSeed}`}
             autoFocus
-            defaultValue=""
-            placeholder="Project title"
+            defaultValue={title}
+            placeholder="专题名称"
             className="text-lg font-semibold"
             onChange={(v) => setTitle(v)}
             onSubmit={handleSubmit}
@@ -395,12 +439,78 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
         {/* Description */}
         <div className="flex-1 min-h-0 overflow-y-auto px-5">
-          <ContentEditor
-            ref={descEditorRef}
-            defaultValue=""
-            placeholder="Add description..."
-            debounceMs={500}
-          />
+          <div className="space-y-4 pb-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium text-foreground">推荐模板</p>
+                  <p className="text-xs text-muted-foreground">
+                    可选，点击后自动填充专题名称、说明和优先级。
+                  </p>
+                </div>
+                {selectedTemplateId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={clearTemplate}
+                  >
+                    清空模板
+                  </Button>
+                )}
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {TOPIC_TEMPLATES.map((template) => {
+                  const active = selectedTemplateId === template.id;
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      className="text-left"
+                      onClick={() => applyTemplate(template.id)}
+                    >
+                      <Card
+                        size="sm"
+                        className={cn(
+                          "h-full transition-colors hover:bg-accent/40",
+                          active && "ring-2 ring-primary",
+                        )}
+                      >
+                        <CardHeader className="gap-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <CardTitle className="text-sm">{template.name}</CardTitle>
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                PROJECT_PRIORITY_CONFIG[template.priority].color,
+                              )}
+                            >
+                              {PROJECT_PRIORITY_CONFIG[template.priority].label}
+                            </span>
+                          </div>
+                          <CardDescription className="text-xs leading-5">
+                            {template.description}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium text-foreground">专题说明</p>
+              <ContentEditor
+                key={`create-topic-description-${editorSeed}`}
+                ref={descEditorRef}
+                defaultValue={descriptionDraft}
+                placeholder="补充专题背景、目标和协同说明..."
+                className="min-h-28"
+                debounceMs={500}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Property toolbar */}
@@ -456,7 +566,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                       <span>{leadLabel}</span>
                     </>
                   ) : (
-                    <span className="text-muted-foreground">Lead</span>
+                    <span className="text-muted-foreground">负责人</span>
                   )}
                 </PillButton>
               }
@@ -467,7 +577,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   type="text"
                   value={leadFilter}
                   onChange={(e) => setLeadFilter(e.target.value)}
-                  placeholder="Assign lead..."
+                  placeholder="搜索负责人..."
                   className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
                 />
               </div>
@@ -478,11 +588,11 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
                 >
                   <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">No lead</span>
+                  <span className="text-muted-foreground">未设置负责人</span>
                 </button>
                 {filteredMembers.length > 0 && (
                   <>
-                    <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Members</div>
+                    <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">成员</div>
                     {filteredMembers.map((m) => (
                       <button
                         type="button"
@@ -498,7 +608,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 )}
                 {filteredAgents.length > 0 && (
                   <>
-                    <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Agents</div>
+                    <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("agent")}</div>
                     {filteredAgents.map((a) => (
                       <button
                         type="button"
@@ -513,7 +623,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   </>
                 )}
                 {filteredMembers.length === 0 && filteredAgents.length === 0 && leadFilter && (
-                  <div className="px-2 py-3 text-center text-sm text-muted-foreground">No results</div>
+                  <div className="px-2 py-3 text-center text-sm text-muted-foreground">暂无匹配结果</div>
                 )}
               </div>
             </PopoverContent>
@@ -523,7 +633,7 @@ function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChan
         {/* Footer */}
         <div className="flex items-center justify-end px-4 py-3 border-t shrink-0">
           <Button size="sm" onClick={handleSubmit} disabled={!title.trim() || submitting}>
-            {submitting ? "Creating..." : "Create Project"}
+            {submitting ? "创建中..." : "创建专题"}
           </Button>
         </div>
       </DialogContent>
@@ -542,14 +652,14 @@ export function ProjectsPage() {
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-5">
         <div className="flex items-center gap-2">
           <FolderKanban className="h-4 w-4 text-muted-foreground" />
-          <h1 className="text-sm font-medium">Projects</h1>
+          <h1 className="text-sm font-medium">{t("projectsCenter")}</h1>
           {!isLoading && projects.length > 0 && (
             <span className="text-xs text-muted-foreground tabular-nums">{projects.length}</span>
           )}
         </div>
         <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
           <Plus className="h-3.5 w-3.5 mr-1" />
-          New project
+          新建{t("project")}
         </Button>
       </div>
 
@@ -564,9 +674,9 @@ export function ProjectsPage() {
         ) : projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
             <FolderKanban className="h-10 w-10 mb-3 opacity-30" />
-            <p className="text-sm">No projects yet</p>
+            <p className="text-sm">暂无{t("project")}</p>
             <Button size="sm" variant="outline" className="mt-3" onClick={() => setCreateOpen(true)}>
-              Create your first project
+              创建首个{t("project")}
             </Button>
           </div>
         ) : (
@@ -575,12 +685,12 @@ export function ProjectsPage() {
             <div className="sticky top-0 z-[1] flex h-8 items-center gap-2 border-b bg-muted/30 px-5 text-xs font-medium text-muted-foreground">
               {/* Icon spacer + Name */}
               <span className="shrink-0 w-[24px]" />
-              <span className="min-w-0 flex-1">Name</span>
-              <span className="w-24 text-center shrink-0">Priority</span>
-              <span className="w-28 text-center shrink-0">Status</span>
-              <span className="w-24 text-center shrink-0">Progress</span>
-              <span className="w-10 text-center shrink-0">Lead</span>
-              <span className="w-20 text-right shrink-0">Created</span>
+              <span className="min-w-0 flex-1">专题名称</span>
+              <span className="w-24 text-center shrink-0">优先级</span>
+              <span className="w-28 text-center shrink-0">状态</span>
+              <span className="w-24 text-center shrink-0">进展</span>
+              <span className="w-10 text-center shrink-0">负责人</span>
+              <span className="w-20 text-right shrink-0">创建时间</span>
             </div>
             {/* Rows */}
             {projects.map((project) => (

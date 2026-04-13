@@ -7,6 +7,7 @@ WORKDIR /src
 
 # Cache dependencies
 COPY server/go.mod server/go.sum ./server/
+COPY server/testdeps/ ./server/testdeps/
 RUN cd server && go mod download
 
 # Copy server source

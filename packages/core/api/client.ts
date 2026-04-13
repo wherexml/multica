@@ -3,6 +3,9 @@ import type {
   CreateIssueRequest,
   UpdateIssueRequest,
   ListIssuesResponse,
+  ListDecisionsParams,
+  ListDecisionsResponse,
+  DecisionDetail,
   SearchIssuesResponse,
   SearchProjectsResponse,
   UpdateMeRequest,
@@ -108,10 +111,7 @@ export class ApiClient {
   }
 
   private async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    const rid = (typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-    ).slice(0, 8);
+    const rid = crypto.randomUUID().slice(0, 8);
     const start = Date.now();
     const method = init?.method ?? "GET";
 
@@ -149,6 +149,20 @@ export class ApiClient {
   }
 
   // Auth
+  async sendCode(email: string): Promise<void> {
+    await this.fetch("/auth/send-code", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyCode(email: string, code: string): Promise<LoginResponse> {
+    return this.fetch("/auth/verify-code", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+  }
+
   async register(name: string, email: string, password: string): Promise<LoginResponse> {
     return this.fetch("/auth/register", {
       method: "POST",
@@ -215,6 +229,24 @@ export class ApiClient {
 
   async getIssue(id: string): Promise<Issue> {
     return this.fetch(`/api/issues/${id}`);
+  }
+
+  async getDecision(id: string): Promise<DecisionDetail> {
+    return this.fetch(`/api/decisions/${id}`);
+  }
+
+  async listDecisions(params?: ListDecisionsParams): Promise<ListDecisionsResponse> {
+    const search = new URLSearchParams();
+    if (params?.page) search.set("page", String(params.page));
+    if (params?.page_size) search.set("page_size", String(params.page_size));
+    if (params?.phase) search.set("phase", params.phase);
+    if (params?.risk_level) search.set("risk_level", params.risk_level);
+    if (params?.execution_mode) search.set("execution_mode", params.execution_mode);
+    if (params?.decision_type) search.set("decision_type", params.decision_type);
+    if (params?.object_type) search.set("object_type", params.object_type);
+    if (params?.project_id) search.set("project_id", params.project_id);
+    const query = search.toString();
+    return this.fetch(`/api/decisions${query ? `?${query}` : ""}`);
   }
 
   async createIssue(data: CreateIssueRequest): Promise<Issue> {
@@ -613,10 +645,7 @@ export class ApiClient {
     if (opts?.issueId) formData.append("issue_id", opts.issueId);
     if (opts?.commentId) formData.append("comment_id", opts.commentId);
 
-    const rid = (typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-    ).slice(0, 8);
+    const rid = crypto.randomUUID().slice(0, 8);
     const start = Date.now();
     this.logger.info("→ POST /api/upload-file", { rid });
 

@@ -78,3 +78,13 @@ SELECT count(*) FROM agent WHERE runtime_id = $1 AND archived_at IS NULL;
 
 -- name: DeleteArchivedAgentsByRuntime :exec
 DELETE FROM agent WHERE runtime_id = $1 AND archived_at IS NOT NULL;
+
+-- name: UpdateAgentRuntime :one
+UPDATE agent_runtime
+SET name = COALESCE(sqlc.narg('name'), name),
+    status = COALESCE(sqlc.narg('status'), status),
+    device_info = COALESCE(sqlc.narg('device_info'), device_info),
+    metadata = COALESCE(sqlc.narg('metadata'), metadata),
+    updated_at = now()
+WHERE id = sqlc.arg('id') AND workspace_id = sqlc.arg('workspace_id')
+RETURNING *;

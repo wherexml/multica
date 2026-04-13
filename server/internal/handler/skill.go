@@ -151,21 +151,9 @@ func (h *Handler) ListSkills(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]SkillWithFilesResponse, len(skills))
+	resp := make([]SkillResponse, len(skills))
 	for i, s := range skills {
-		files, err := h.Queries.ListSkillFiles(r.Context(), s.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to list skill files")
-			return
-		}
-		fileResps := make([]SkillFileResponse, len(files))
-		for j, f := range files {
-			fileResps[j] = skillFileToResponse(f)
-		}
-		resp[i] = SkillWithFilesResponse{
-			SkillResponse: skillToResponse(s),
-			Files:         fileResps,
-		}
+		resp[i] = skillToResponse(s)
 	}
 
 	writeJSON(w, http.StatusOK, resp)

@@ -26,7 +26,20 @@ export class WSClient {
   }
 
   connect() {
-    const url = new URL(this.baseUrl);
+    // Handle both absolute and relative URLs
+    let wsUrl: string;
+    if (this.baseUrl.startsWith("ws://") || this.baseUrl.startsWith("wss://")) {
+      wsUrl = this.baseUrl;
+    } else if (this.baseUrl.startsWith("/")) {
+      // Relative URL - construct from current location
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      wsUrl = `${protocol}//${window.location.host}${this.baseUrl}`;
+    } else {
+      // Fallback: try to construct as absolute URL
+      wsUrl = this.baseUrl;
+    }
+
+    const url = new URL(wsUrl);
     if (this.token) url.searchParams.set("token", this.token);
     if (this.workspaceId)
       url.searchParams.set("workspace_id", this.workspaceId);

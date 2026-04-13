@@ -1,4 +1,11 @@
-import type { Issue, IssueStatus, IssuePriority } from "@multica/core/types";
+import type {
+  DecisionExecutionMode,
+  DecisionPhase,
+  DecisionRiskLevel,
+  Issue,
+  IssuePriority,
+  IssueStatus,
+} from "@multica/core/types";
 import type { ActorFilterValue } from "@multica/core/issues/stores/view-store";
 
 export interface IssueFilters {
@@ -9,6 +16,24 @@ export interface IssueFilters {
   creatorFilters: ActorFilterValue[];
   projectFilters: string[];
   includeNoProject: boolean;
+  phaseFilters: DecisionPhase[];
+  riskLevelFilters: DecisionRiskLevel[];
+  executionModeFilters: DecisionExecutionMode[];
+  decisionTypeFilters: string[];
+  objectTypeFilters: string[];
+}
+
+function matchesDecisionFilter(
+  value: string | null | undefined,
+  activeFilters: string[],
+): boolean {
+  if (activeFilters.length === 0) return true;
+
+  // Until the decision sidecar is wired into every issue payload, keep
+  // issues without decision metadata visible instead of filtering them out.
+  if (!value) return true;
+
+  return activeFilters.includes(value);
 }
 
 /**
@@ -21,7 +46,20 @@ export interface IssueFilters {
  * - When both → show matching assignees + unassigned
  */
 export function filterIssues(issues: Issue[], filters: IssueFilters): Issue[] {
-  const { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject } = filters;
+  const {
+    statusFilters,
+    priorityFilters,
+    assigneeFilters,
+    includeNoAssignee,
+    creatorFilters,
+    projectFilters,
+    includeNoProject,
+    phaseFilters,
+    riskLevelFilters,
+    executionModeFilters,
+    decisionTypeFilters,
+    objectTypeFilters,
+  } = filters;
   const hasAssigneeFilter = assigneeFilters.length > 0 || includeNoAssignee;
   const hasProjectFilter = projectFilters.length > 0 || includeNoProject;
 
@@ -66,6 +104,14 @@ export function filterIssues(issues: Issue[], filters: IssueFilters): Issue[] {
         return false;
       }
     }
+
+    if (!matchesDecisionFilter(issue.phase, phaseFilters)) return false;
+    if (!matchesDecisionFilter(issue.risk_level, riskLevelFilters)) return false;
+    if (!matchesDecisionFilter(issue.execution_mode, executionModeFilters))
+      return false;
+    if (!matchesDecisionFilter(issue.decision_type, decisionTypeFilters))
+      return false;
+    if (!matchesDecisionFilter(issue.object_type, objectTypeFilters)) return false;
 
     return true;
   });

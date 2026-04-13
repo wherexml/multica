@@ -1,4 +1,18 @@
-export type { Issue, IssueStatus, IssuePriority, IssueAssigneeType, IssueReaction } from "./issue";
+export {
+  DECISION_PHASES,
+  DECISION_RISK_LEVELS,
+  DECISION_EXECUTION_MODES,
+} from "./issue";
+export type {
+  Issue,
+  IssueStatus,
+  IssuePriority,
+  IssueAssigneeType,
+  IssueReaction,
+  DecisionPhase,
+  DecisionRiskLevel,
+  DecisionExecutionMode,
+} from "./issue";
 export type {
   Agent,
   AgentStatus,

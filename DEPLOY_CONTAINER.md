@@ -1,6 +1,6 @@
-# 容器化部署指南 (41XXX 端口范围)
+# 容器化部署指南 (2220X 端口范围)
 
-这份指南帮助你在容器中使用 41XXX 端口范围部署 Multica。
+这份指南帮助你在容器中使用 2220X 端口范围部署 Multica。
 
 ## 快速开始
 
@@ -19,9 +19,9 @@ cp .env.container .env.container.local
 
 | 服务       | 端口  | 说明              |
 |------------|-------|-------------------|
-| PostgreSQL | 41500 | 数据库            |
-| Backend    | 41501 | Go API 服务       |
-| Frontend   | 41502 | Next.js 前端      |
+| PostgreSQL | 22200 | 数据库            |
+| Backend    | 22201 | Go API 服务       |
+| Frontend   | 22202 | Next.js 前端      |
 
 ## 手动部署步骤
 
@@ -84,9 +84,9 @@ docker compose down -v
 
 | 变量名              | 默认值              | 说明              |
 |---------------------|---------------------|-------------------|
-| `POSTGRES_PORT`     | 41500               | 数据库外部端口    |
-| `BACKEND_PORT`      | 41501               | 后端服务外部端口  |
-| `FRONTEND_PORT`     | 41502               | 前端服务外部端口  |
+| `POSTGRES_PORT`     | 22200               | 数据库外部端口    |
+| `BACKEND_PORT`      | 22201               | 后端服务外部端口  |
+| `FRONTEND_PORT`     | 22202               | 前端服务外部端口  |
 | `POSTGRES_PASSWORD` | multica             | 数据库密码        |
 | `LOG_LEVEL`         | info                | 日志级别          |
 
@@ -95,8 +95,8 @@ docker compose down -v
 部署完成后，配置 CLI 指向你的容器服务：
 
 ```bash
-export MULTICA_APP_URL=http://localhost:41502
-export MULTICA_SERVER_URL=ws://localhost:41501/ws
+export MULTICA_APP_URL=http://localhost:22202
+export MULTICA_SERVER_URL=ws://localhost:22201/ws
 
 # 登录
 multica login
@@ -111,9 +111,9 @@ multica daemon start
 
 ```bash
 # 检查端口占用
-lsof -i :41500
-lsof -i :41501
-lsof -i :41502
+lsof -i :22200
+lsof -i :22201
+lsof -i :22202
 
 # 停止占用端口的进程或修改 .env.container 中的端口
 ```
@@ -137,7 +137,7 @@ docker compose logs backend
 docker compose logs frontend
 
 # 检查健康状态
-curl http://localhost:41501/health
+curl http://localhost:22201/health
 ```
 
 ### 重置所有数据

@@ -100,6 +100,24 @@ vi.mock("@multica/core/issues/config", () => ({
     low: { label: "Low", bars: 1, color: "text-info" },
     none: { label: "No priority", bars: 0, color: "text-muted-foreground" },
   },
+  getIssueStatusLabel: (status: string) =>
+    ({
+      backlog: "Backlog",
+      todo: "Todo",
+      in_progress: "In Progress",
+      in_review: "In Review",
+      done: "Done",
+      blocked: "Blocked",
+      cancelled: "Cancelled",
+    })[status] ?? status,
+  getIssuePriorityLabel: (priority: string) =>
+    ({
+      urgent: "Urgent",
+      high: "High",
+      medium: "Medium",
+      low: "Low",
+      none: "No priority",
+    })[priority] ?? priority,
 }));
 
 // Mock view store
@@ -112,6 +130,11 @@ const mockViewState = {
   creatorFilters: [] as { type: string; id: string }[],
   projectFilters: [] as string[],
   includeNoProject: false,
+  phaseFilters: [] as string[],
+  riskLevelFilters: [] as string[],
+  executionModeFilters: [] as string[],
+  decisionTypeFilters: [] as string[],
+  objectTypeFilters: [] as string[],
   sortBy: "position" as const,
   sortDirection: "asc" as const,
   cardProperties: { priority: true, description: true, assignee: true, dueDate: true },
@@ -124,6 +147,16 @@ const mockViewState = {
   toggleCreatorFilter: vi.fn(),
   toggleProjectFilter: vi.fn(),
   toggleNoProject: vi.fn(),
+  togglePhaseFilter: vi.fn(),
+  setPhaseFilters: vi.fn(),
+  toggleRiskLevelFilter: vi.fn(),
+  setRiskLevelFilters: vi.fn(),
+  toggleExecutionModeFilter: vi.fn(),
+  setExecutionModeFilters: vi.fn(),
+  toggleDecisionTypeFilter: vi.fn(),
+  setDecisionTypeFilters: vi.fn(),
+  toggleObjectTypeFilter: vi.fn(),
+  setObjectTypeFilters: vi.fn(),
   hideStatus: vi.fn(),
   showStatus: vi.fn(),
   clearFilters: vi.fn(),
@@ -356,6 +389,11 @@ describe("IssuesPage (shared)", () => {
     mockViewState.viewMode = "board";
     mockViewState.statusFilters = [];
     mockViewState.priorityFilters = [];
+    mockViewState.phaseFilters = [];
+    mockViewState.riskLevelFilters = [];
+    mockViewState.executionModeFilters = [];
+    mockViewState.decisionTypeFilters = [];
+    mockViewState.objectTypeFilters = [];
   });
 
   it("shows loading skeletons initially", () => {
@@ -397,7 +435,7 @@ describe("IssuesPage (shared)", () => {
     expect(screen.getAllByText("In Progress").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows workspace breadcrumb with 'Issues' label", async () => {
+  it("shows workspace breadcrumb with the decision center label", async () => {
     mockListIssues.mockImplementation((params: any) =>
       Promise.resolve(
         params?.open_only
@@ -408,7 +446,7 @@ describe("IssuesPage (shared)", () => {
 
     renderWithQuery(<IssuesPage />);
 
-    await screen.findByText("Issues");
+    await screen.findByText("决策单中心");
     expect(screen.getByText("Test WS")).toBeInTheDocument();
   });
 
@@ -417,8 +455,8 @@ describe("IssuesPage (shared)", () => {
 
     renderWithQuery(<IssuesPage />);
 
-    await screen.findByText("No issues yet");
-    expect(screen.getByText("Create an issue to get started.")).toBeInTheDocument();
+    await screen.findByText("暂无决策单");
+    expect(screen.getByText("创建决策单后即可开始协同。")).toBeInTheDocument();
   });
 
   it("shows scope tab buttons", async () => {

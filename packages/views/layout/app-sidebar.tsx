@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
+import {
+  getClientLocale,
+  getDefaultLocale,
+  t as lexiconT,
+  type LexiconLocale,
+  type LexiconKey,
+} from "@multica/core/platform";
 import { cn } from "@multica/ui/lib/utils";
 import { AppLink, useNavigation } from "../navigation";
 import {
@@ -29,6 +36,7 @@ import {
   FolderKanban,
   Ellipsis,
   PinOff,
+  type LucideIcon,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
@@ -62,27 +70,52 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inboxKeys, deduplicateInboxItems } from "@multica/core/inbox/queries";
 import { api } from "@multica/core/api";
 import { useModalStore } from "@multica/core/modals";
-import { useMyRuntimesNeedUpdate } from "@multica/core/runtimes/hooks";
 import { pinKeys } from "@multica/core/pins/queries";
 import { useDeletePin, useReorderPins } from "@multica/core/pins/mutations";
 import type { PinnedItem } from "@multica/core/types";
 
-const personalNav = [
-  { href: "/inbox", label: "Inbox", icon: Inbox },
-  { href: "/my-issues", label: "My Issues", icon: CircleUser },
+type SidebarNavKey =
+  | "inbox"
+  | "myIssues"
+  | "issuesCenter"
+  | "projectsCenter"
+  | "agent"
+  | "runtime"
+  | "skill"
+  | "settings";
+
+type SidebarNavItem = {
+  href: string;
+  labelKey: SidebarNavKey;
+  icon: LucideIcon;
+};
+
+const DEFAULT_SIDEBAR_LOCALE: LexiconLocale = getDefaultLocale();
+
+const personalNav: SidebarNavItem[] = [
+  { href: "/inbox", labelKey: "inbox", icon: Inbox },
+  { href: "/my-issues", labelKey: "myIssues", icon: CircleUser },
 ];
 
-const workspaceNav = [
-  { href: "/issues", label: "Issues", icon: ListTodo },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/agents", label: "Agents", icon: Bot },
+const workspaceNav: SidebarNavItem[] = [
+  { href: "/issues", labelKey: "issuesCenter", icon: ListTodo },
+  { href: "/projects", labelKey: "projectsCenter", icon: FolderKanban },
+  { href: "/agents", labelKey: "agent", icon: Bot },
 ];
 
-const configureNav = [
-  { href: "/runtimes", label: "Runtimes", icon: Monitor },
-  { href: "/skills", label: "Skills", icon: BookOpenText },
-  { href: "/settings", label: "Settings", icon: Settings },
+const configureNav: SidebarNavItem[] = [
+  { href: "/runtimes", labelKey: "runtime", icon: Monitor },
+  { href: "/skills", labelKey: "skill", icon: BookOpenText },
+  { href: "/settings", labelKey: "settings", icon: Settings },
 ];
+
+function getSidebarLocale(): LexiconLocale {
+  return getClientLocale(DEFAULT_SIDEBAR_LOCALE);
+}
+
+function getSidebarLabel(key: SidebarNavKey, locale: LexiconLocale): string {
+  return lexiconT(key as LexiconKey, locale);
+}
 
 function DraftDot() {
   const hasDraft = useIssueDraftStore((s) => !!(s.draft.title || s.draft.description));
@@ -153,10 +186,14 @@ interface AppSidebarProps {
   headerClassName?: string;
   /** Extra style for SidebarHeader */
   headerStyle?: React.CSSProperties;
+  /** Whether sidebar can be collapsed */
+  collapsible?: "offcanvas" | "icon" | "none";
 }
 
-export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }: AppSidebarProps = {}) {
+export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle, collapsible = "offcanvas" }: AppSidebarProps = {}) {
   const { pathname, push } = useNavigation();
+  const locale = getSidebarLocale();
+  const isZh = locale === "zh-CN";
   const user = useAuthStore((s) => s.user);
   const authLogout = useAuthStore((s) => s.logout);
   const workspace = useWorkspaceStore((s) => s.workspace);
@@ -173,7 +210,6 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
     () => deduplicateInboxItems(inboxItems).filter((i) => !i.read).length,
     [inboxItems],
   );
-  const hasRuntimeUpdates = useMyRuntimesNeedUpdate(wsId);
   const { data: pinnedItems = [] } = useQuery<PinnedItem[]>({
     queryKey: wsId ? pinKeys.list(wsId) : ["pins", "disabled"],
     queryFn: () => api.listPins(),
@@ -226,7 +262,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   }, [pathname]);
 
   return (
-      <Sidebar variant="inset">
+      <Sidebar variant="inset" collapsible={collapsible}>
         {topSlot}
         {/* Workspace Switcher */}
         <SidebarHeader className={cn("py-3", headerClassName)} style={headerStyle}>
@@ -315,7 +351,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                   <SquarePen />
                   <DraftDot />
                 </span>
-                <span>New Issue</span>
+                <span>新建决策单</span>
                 <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">C</kbd>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -329,6 +365,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
               <SidebarMenu className="gap-0.5">
                 {personalNav.map((item) => {
                   const isActive = pathname === item.href;
+                  const label = getSidebarLabel(item.labelKey, locale);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -337,8 +374,8 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
-                        {item.label === "Inbox" && unreadCount > 0 && (
+                        <span>{label}</span>
+                        {item.labelKey === "inbox" && unreadCount > 0 && (
                           <span className="ml-auto text-xs">
                             {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
@@ -353,7 +390,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
 
           {pinnedItems.length > 0 && (
             <SidebarGroup>
-              <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+              <SidebarGroupLabel>{isZh ? "已固定" : "Pinned"}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={pinnedItems.map((p) => p.id)} strategy={verticalListSortingStrategy}>
@@ -374,11 +411,12 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
           )}
 
           <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+            <SidebarGroupLabel>{isZh ? "业务空间" : "Workspace"}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {workspaceNav.map((item) => {
                   const isActive = pathname === item.href;
+                  const label = getSidebarLabel(item.labelKey, locale);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -387,7 +425,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
+                        <span>{label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -397,11 +435,12 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>Configure</SidebarGroupLabel>
+            <SidebarGroupLabel>{isZh ? "设置" : "Configure"}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {configureNav.map((item) => {
                   const isActive = pathname === item.href;
+                  const label = getSidebarLabel(item.labelKey, locale);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -410,10 +449,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
-                        {item.label === "Runtimes" && hasRuntimeUpdates && (
-                          <span className="ml-auto size-1.5 rounded-full bg-destructive" />
-                        )}
+                        <span>{label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );

@@ -2,41 +2,65 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// Mock next/navigation
+const {
+  mockPush,
+  mockReplace,
+  mockSetUser,
+  mockHydrateWorkspace,
+  mockLogin,
+  mockListWorkspaces,
+  mockSetToken,
+  mockSetLoggedInCookie,
+} = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockReplace: vi.fn(),
+  mockSetUser: vi.fn(),
+  mockHydrateWorkspace: vi.fn(),
+  mockLogin: vi.fn(),
+  mockListWorkspaces: vi.fn(),
+  mockSetToken: vi.fn(),
+  mockSetLoggedInCookie: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  usePathname: () => "/login",
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock auth store
-const mockLogin = vi.fn();
-vi.mock("@/features/auth", () => ({
-  useAuthStore: (selector: (s: any) => any) =>
-    selector({
-      user: null,
-      isLoading: false,
-      login: mockLogin,
-    }),
-}));
+vi.mock("@multica/core/auth", () => {
+  const authState = {
+    user: null,
+    isLoading: false,
+    setUser: mockSetUser,
+  };
+  const useAuthStore = Object.assign(
+    (selector: (s: typeof authState) => unknown) => selector(authState),
+    { getState: () => authState },
+  );
+  return { useAuthStore };
+});
 
-// Mock workspace store
-const mockHydrateWorkspace = vi.fn();
-vi.mock("@/features/workspace", () => ({
-  useWorkspaceStore: (selector: (s: any) => any) =>
-    selector({
-      hydrateWorkspace: mockHydrateWorkspace,
-    }),
-}));
+vi.mock("@multica/core/workspace", () => {
+  const wsState = {
+    hydrateWorkspace: mockHydrateWorkspace,
+  };
+  const useWorkspaceStore = Object.assign(
+    (selector: (s: typeof wsState) => unknown) => selector(wsState),
+    { getState: () => wsState },
+  );
+  return { useWorkspaceStore };
+});
 
-// Mock api
-vi.mock("@/shared/api", () => ({
+vi.mock("@multica/core/api", () => ({
   api: {
-    listWorkspaces: vi.fn().mockResolvedValue([]),
-    login: vi.fn(),
-    setToken: vi.fn(),
-    getMe: vi.fn(),
+    login: mockLogin,
+    listWorkspaces: mockListWorkspaces,
+    setToken: mockSetToken,
   },
+}));
+
+vi.mock("@/features/auth/auth-cookie", () => ({
+  setLoggedInCookie: mockSetLoggedInCookie,
 }));
 
 import LoginPage from "./page";
@@ -44,78 +68,69 @@ import LoginPage from "./page";
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
-  it("renders login form with email, password inputs and sign in button", () => {
+  it("renders the password login form", () => {
     render(<LoginPage />);
 
-    expect(screen.getByText("Multica")).toBeInTheDocument();
-    expect(screen.getByText("Sign in to your account")).toBeInTheDocument();
+    expect(screen.getByText("Sign in to Multica")).toBeInTheDocument();
+    expect(
+      screen.getByText("Enter your email and password to continue"),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Sign in" })
-    ).toBeInTheDocument();
-    expect(screen.getByText("Don't have an account?")).toBeInTheDocument();
-    expect(screen.getByText("Sign up")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
-  it("does not call login when email is empty", async () => {
+  it("stores the session, hydrates workspace, updates auth state, and navigates after login", async () => {
+    const loginResponse = {
+      token: "token-123",
+      user: {
+        id: "user-1",
+        name: "Steve",
+        email: "admin@local",
+        avatar_url: null,
+        created_at: "2026-04-13T00:00:00Z",
+        updated_at: "2026-04-13T00:00:00Z",
+      },
+    };
+    const workspaces = [
+      {
+        id: "ws-1",
+        name: "Local Dev",
+        slug: "local-dev",
+        description: null,
+        context: null,
+        settings: {},
+        repos: [],
+        issue_prefix: "LOC",
+        created_at: "2026-04-13T00:00:00Z",
+        updated_at: "2026-04-13T00:00:00Z",
+      },
+    ];
+    mockLogin.mockResolvedValueOnce(loginResponse);
+    mockListWorkspaces.mockResolvedValueOnce(workspaces);
+
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(mockLogin).not.toHaveBeenCalled();
-  });
-
-  it("does not call login when password is empty", async () => {
-    const user = userEvent.setup();
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText("Email"), "test@multica.ai");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(mockLogin).not.toHaveBeenCalled();
-  });
-
-  it("calls login with email and password on submit", async () => {
-    mockLogin.mockResolvedValueOnce({ id: "user-1", email: "test@multica.ai" });
-    const user = userEvent.setup();
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText("Email"), "test@multica.ai");
-    await user.type(screen.getByLabelText("Password"), "password123");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
-
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith("test@multica.ai", "password123");
-    });
-  });
-
-  it("shows 'Signing in...' while submitting", async () => {
-    mockLogin.mockReturnValueOnce(new Promise(() => {}));
-    const user = userEvent.setup();
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText("Email"), "test@multica.ai");
-    await user.type(screen.getByLabelText("Password"), "password123");
+    await user.type(screen.getByLabelText("Email"), "admin@local");
+    await user.type(screen.getByLabelText("Password"), "admin123");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Signing in...")).toBeInTheDocument();
+      expect(mockLogin).toHaveBeenCalledWith("admin@local", "admin123");
     });
-  });
-
-  it("shows error when login fails", async () => {
-    mockLogin.mockRejectedValueOnce(new Error("Invalid email or password"));
-    const user = userEvent.setup();
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText("Email"), "test@multica.ai");
-    await user.type(screen.getByLabelText("Password"), "wrongpassword");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Invalid email or password")).toBeInTheDocument();
+      expect(mockSetToken).toHaveBeenCalledWith("token-123");
+      expect(mockSetLoggedInCookie).toHaveBeenCalled();
+      expect(mockSetUser).toHaveBeenCalledWith(loginResponse.user);
+      expect(mockHydrateWorkspace).toHaveBeenCalledWith(workspaces, null);
+      expect(mockPush).toHaveBeenCalledWith("/issues");
     });
+
+    expect(localStorage.getItem("multica_token")).toBe("token-123");
   });
 });

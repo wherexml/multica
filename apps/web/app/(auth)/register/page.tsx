@@ -2,9 +2,10 @@
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useAuthStore } from "@/features/auth";
-import { useWorkspaceStore } from "@/features/workspace";
-import { api } from "@/shared/api";
+import { useAuthStore } from "@multica/core/auth";
+import { useWorkspaceStore } from "@multica/core/workspace";
+import { api } from "@multica/core/api";
+import { setLoggedInCookie } from "@/features/auth/auth-cookie";
 import {
   Card,
   CardHeader,
@@ -12,19 +13,16 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@/components/ui/card";
+} from "@multica/ui/components/ui/card";
+import { Input } from "@multica/ui/components/ui/input";
+import { Button } from "@multica/ui/components/ui/button";
+import { Label } from "@multica/ui/components/ui/label";
 import Link from "next/link";
-
-const inputClass =
-  "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
-const btnClass =
-  "inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 function RegisterPageContent() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const register = useAuthStore((s) => s.register);
   const hydrateWorkspace = useWorkspaceStore((s) => s.hydrateWorkspace);
   const searchParams = useSearchParams();
 
@@ -72,9 +70,12 @@ function RegisterPageContent() {
     setError("");
     setSubmitting(true);
     try {
-      await register(name, email, password);
+      const { token } = await api.register(name, email, password);
+      localStorage.setItem("multica_token", token);
+      api.setToken(token);
+      setLoggedInCookie();
       const wsList = await api.listWorkspaces();
-      await hydrateWorkspace(wsList);
+      hydrateWorkspace(wsList);
       router.push(searchParams.get("next") || "/issues");
     } catch (err) {
       setError(
@@ -85,7 +86,7 @@ function RegisterPageContent() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-svh items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create account</CardTitle>
@@ -94,8 +95,8 @@ function RegisterPageContent() {
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium leading-none">Name</label>
-              <input
+              <Label htmlFor="name">Name</Label>
+              <Input
                 ref={nameRef}
                 id="name"
                 name="name"
@@ -103,12 +104,11 @@ function RegisterPageContent() {
                 autoComplete="name"
                 placeholder="John Doe"
                 required
-                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium leading-none">Email</label>
-              <input
+              <Label htmlFor="email">Email</Label>
+              <Input
                 ref={emailRef}
                 id="email"
                 name="email"
@@ -116,12 +116,11 @@ function RegisterPageContent() {
                 autoComplete="email"
                 placeholder="you@example.com"
                 required
-                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium leading-none">Password</label>
-              <input
+              <Label htmlFor="password">Password</Label>
+              <Input
                 ref={passwordRef}
                 id="password"
                 name="password"
@@ -129,12 +128,11 @@ function RegisterPageContent() {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required
-                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="confirm-password" className="text-sm font-medium leading-none">Confirm Password</label>
-              <input
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
                 ref={confirmRef}
                 id="confirm-password"
                 name="confirm-password"
@@ -142,22 +140,22 @@ function RegisterPageContent() {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required
-                className={inputClass}
               />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className={btnClass}
-            >
-              {submitting ? "Creating account..." : "Sign up"}
-            </button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={submitting}
+          >
+            {submitting ? "Creating account..." : "Sign up"}
+          </Button>
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">

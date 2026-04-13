@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { ChevronRight, ListTodo } from "lucide-react";
 import type { IssueStatus } from "@multica/core/types";
+import { t } from "@multica/core/platform";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useIssueViewStore, initFilterWorkspaceSync } from "@multica/core/issues/stores/view-store";
@@ -36,6 +37,11 @@ export function IssuesPage() {
   const creatorFilters = useIssueViewStore((s) => s.creatorFilters);
   const projectFilters = useIssueViewStore((s) => s.projectFilters);
   const includeNoProject = useIssueViewStore((s) => s.includeNoProject);
+  const phaseFilters = useIssueViewStore((s) => s.phaseFilters);
+  const riskLevelFilters = useIssueViewStore((s) => s.riskLevelFilters);
+  const executionModeFilters = useIssueViewStore((s) => s.executionModeFilters);
+  const decisionTypeFilters = useIssueViewStore((s) => s.decisionTypeFilters);
+  const objectTypeFilters = useIssueViewStore((s) => s.objectTypeFilters);
 
   useEffect(() => {
     initFilterWorkspaceSync();
@@ -55,8 +61,36 @@ export function IssuesPage() {
   }, [allIssues, scope]);
 
   const issues = useMemo(
-    () => filterIssues(scopedIssues, { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject }),
-    [scopedIssues, statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject],
+    () =>
+      filterIssues(scopedIssues, {
+        statusFilters,
+        priorityFilters,
+        assigneeFilters,
+        includeNoAssignee,
+        creatorFilters,
+        projectFilters,
+        includeNoProject,
+        phaseFilters,
+        riskLevelFilters,
+        executionModeFilters,
+        decisionTypeFilters,
+        objectTypeFilters,
+      }),
+    [
+      scopedIssues,
+      statusFilters,
+      priorityFilters,
+      assigneeFilters,
+      includeNoAssignee,
+      creatorFilters,
+      projectFilters,
+      includeNoProject,
+      phaseFilters,
+      riskLevelFilters,
+      executionModeFilters,
+      decisionTypeFilters,
+      objectTypeFilters,
+    ],
   );
 
   // Compute sub-issue progress for each parent from the full (unfiltered) issue list
@@ -142,7 +176,7 @@ export function IssuesPage() {
           {workspace?.name ?? "Workspace"}
         </span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm font-medium">Issues</span>
+        <span className="text-sm font-medium">{t("issuesCenter")}</span>
       </div>
 
       <ViewStoreProvider store={useIssueViewStore}>
@@ -153,8 +187,8 @@ export function IssuesPage() {
         {scopedIssues.length === 0 ? (
           <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
             <ListTodo className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm">No issues yet</p>
-            <p className="text-xs">Create an issue to get started.</p>
+            <p className="text-sm">暂无{t("issue")}</p>
+            <p className="text-xs">创建{t("issue")}后即可开始协同。</p>
           </div>
         ) : (
           <div className="flex flex-col flex-1 min-h-0">

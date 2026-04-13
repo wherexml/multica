@@ -10,6 +10,11 @@ const NO_FILTER: IssueFilters = {
   creatorFilters: [],
   projectFilters: [],
   includeNoProject: false,
+  phaseFilters: [],
+  riskLevelFilters: [],
+  executionModeFilters: [],
+  decisionTypeFilters: [],
+  objectTypeFilters: [],
 };
 
 function makeIssue(overrides: Partial<Issue> = {}): Issue {
@@ -37,10 +42,52 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
 }
 
 const issues: Issue[] = [
-  makeIssue({ id: "1", status: "todo", priority: "high", assignee_type: "member", assignee_id: "u-1", creator_type: "member", creator_id: "u-1", project_id: "p-1" }),
-  makeIssue({ id: "2", status: "in_progress", priority: "medium", assignee_type: "agent", assignee_id: "a-1", creator_type: "agent", creator_id: "a-1", project_id: "p-2" }),
+  makeIssue({
+    id: "1",
+    status: "todo",
+    priority: "high",
+    assignee_type: "member",
+    assignee_id: "u-1",
+    creator_type: "member",
+    creator_id: "u-1",
+    project_id: "p-1",
+    phase: "identified",
+    risk_level: "high",
+    execution_mode: "manual",
+    decision_type: "inventory_rebalance",
+    object_type: "sku",
+  }),
+  makeIssue({
+    id: "2",
+    status: "in_progress",
+    priority: "medium",
+    assignee_type: "agent",
+    assignee_id: "a-1",
+    creator_type: "agent",
+    creator_id: "a-1",
+    project_id: "p-2",
+    phase: "diagnosing",
+    risk_level: "medium",
+    execution_mode: "semi_auto",
+    decision_type: "supplier_switch",
+    object_type: "supplier",
+  }),
   makeIssue({ id: "3", status: "done", priority: "low", assignee_type: null, assignee_id: null, creator_type: "member", creator_id: "u-2", project_id: null }),
-  makeIssue({ id: "4", status: "todo", priority: "urgent", assignee_type: "member", assignee_id: "u-2", creator_type: "member", creator_id: "u-1", project_id: "p-1" }),
+  makeIssue({
+    id: "4",
+    status: "todo",
+    priority: "urgent",
+    assignee_type: "member",
+    assignee_id: "u-2",
+    creator_type: "member",
+    creator_id: "u-1",
+    project_id: "p-1",
+    phase: "monitoring",
+    risk_level: "critical",
+    execution_mode: "auto",
+    decision_type: "route_override",
+    object_type: "route",
+  }),
 ];
 
 describe("filterIssues", () => {
@@ -160,5 +207,34 @@ describe("filterIssues", () => {
       projectFilters: ["p-1"],
     });
     expect(result.map((i) => i.id)).toEqual(["1", "4"]);
+  });
+
+  it("filters known decision metadata while keeping sidecar-less issues visible", () => {
+    const result = filterIssues(issues, {
+      ...NO_FILTER,
+      phaseFilters: ["diagnosing"],
+    });
+
+    expect(result.map((i) => i.id)).toEqual(["2", "3"]);
+  });
+
+  it("applies risk level and execution mode filters together", () => {
+    const result = filterIssues(issues, {
+      ...NO_FILTER,
+      riskLevelFilters: ["critical"],
+      executionModeFilters: ["auto"],
+    });
+
+    expect(result.map((i) => i.id)).toEqual(["3", "4"]);
+  });
+
+  it("filters decision type and object type when values are present", () => {
+    const result = filterIssues(issues, {
+      ...NO_FILTER,
+      decisionTypeFilters: ["inventory_rebalance"],
+      objectTypeFilters: ["sku"],
+    });
+
+    expect(result.map((i) => i.id)).toEqual(["1", "3"]);
   });
 });

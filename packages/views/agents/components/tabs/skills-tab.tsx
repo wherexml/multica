@@ -63,9 +63,9 @@ export function SkillsTab({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">Skills</h3>
+          <h3 className="text-sm font-semibold">技能包</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Reusable skills assigned to this agent. Manage skills on the Skills page.
+            这里显示已经绑定到这个专家的技能包。你也可以在技能包页面统一维护。
           </p>
         </div>
         <Button
@@ -75,16 +75,16 @@ export function SkillsTab({
           disabled={saving || availableSkills.length === 0}
         >
           <Plus className="h-3 w-3" />
-          Add Skill
+          添加技能包
         </Button>
       </div>
 
       {agent.skills.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <FileText className="h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm text-muted-foreground">No skills assigned</p>
+          <p className="mt-3 text-sm text-muted-foreground">还没有绑定技能包</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add skills from the workspace to this agent.
+            可以把工作区里的技能包绑定到这个专家。
           </p>
           {availableSkills.length > 0 && (
             <Button
@@ -94,7 +94,7 @@ export function SkillsTab({
               disabled={saving}
             >
               <Plus className="h-3 w-3" />
-              Add Skill
+              添加技能包
             </Button>
           )}
         </div>
@@ -135,9 +135,9 @@ export function SkillsTab({
         <Dialog open onOpenChange={(v) => { if (!v) setShowPicker(false); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-sm">Add Skill</DialogTitle>
+              <DialogTitle className="text-sm">添加技能包</DialogTitle>
               <DialogDescription className="text-xs">
-                Select a skill to assign to this agent.
+                选择一个要绑定到这个专家的技能包。
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-64 overflow-y-auto space-y-1">
@@ -161,13 +161,13 @@ export function SkillsTab({
               ))}
               {availableSkills.length === 0 && (
                 <p className="py-6 text-center text-xs text-muted-foreground">
-                  All workspace skills are already assigned.
+                  当前工作区里的技能包已经全部绑定了。
                 </p>
               )}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setShowPicker(false)}>
-                Cancel
+                取消
               </Button>
             </DialogFooter>
           </DialogContent>

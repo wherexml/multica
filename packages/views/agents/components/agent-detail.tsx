@@ -30,6 +30,7 @@ import {
 import { Button } from "@multica/ui/components/ui/button";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { statusConfig } from "../config";
+import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-list-item";
 import { InstructionsTab } from "./tabs/instructions-tab";
 import { SkillsTab } from "./tabs/skills-tab";
 import { TasksTab } from "./tabs/tasks-tab";
@@ -41,11 +42,13 @@ function getRuntimeDevice(agent: Agent, runtimes: RuntimeDevice[]): RuntimeDevic
 
 type DetailTab = "instructions" | "skills" | "tasks" | "settings";
 
+const capabilityLabels = ["数据分析", "仿真建模", "方案推荐", "执行操作", "风险评估"] as const;
+
 const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
-  { id: "instructions", label: "Instructions", icon: FileText },
-  { id: "skills", label: "Skills", icon: BookOpenText },
-  { id: "tasks", label: "Tasks", icon: ListTodo },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "instructions", label: "说明", icon: FileText },
+  { id: "skills", label: "技能", icon: BookOpenText },
+  { id: "tasks", label: "任务", icon: ListTodo },
+  { id: "settings", label: "设置", icon: Settings },
 ];
 
 export function AgentDetail({
@@ -66,6 +69,8 @@ export function AgentDetail({
   const [activeTab, setActiveTab] = useState<DetailTab>("instructions");
   const [confirmArchive, setConfirmArchive] = useState(false);
   const isArchived = !!agent.archived_at;
+  const statusLabel = getAgentStatusLabel(agent.status, isArchived);
+  const domainMeta = getAgentDomainMeta(`${agent.name} ${agent.description ?? ""}`);
 
   return (
     <div className="flex h-full flex-col">
@@ -73,9 +78,9 @@ export function AgentDetail({
       {isArchived && (
         <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 text-xs text-muted-foreground border-b">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1">This agent is archived. It cannot be assigned or mentioned.</span>
+          <span className="flex-1">该专家已归档，不能再被指派或提及。</span>
           <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => onRestore(agent.id)}>
-            Restore
+            恢复
           </Button>
         </div>
       )}
@@ -88,12 +93,12 @@ export function AgentDetail({
             <h2 className={`text-sm font-semibold truncate ${isArchived ? "text-muted-foreground" : ""}`}>{agent.name}</h2>
             {isArchived ? (
               <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                Archived
+                {statusLabel}
               </span>
             ) : (
               <span className={`flex items-center gap-1.5 text-xs ${st.color}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
-                {st.label}
+                {statusLabel}
               </span>
             )}
             <span className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
@@ -102,7 +107,7 @@ export function AgentDetail({
               ) : (
                 <Monitor className="h-3 w-3" />
               )}
-              {runtimeDevice?.name ?? (agent.runtime_mode === "cloud" ? "Cloud" : "Local")}
+              {runtimeDevice?.name ?? (agent.runtime_mode === "cloud" ? "云端" : "本地")}
             </span>
           </div>
         </div>
@@ -121,11 +126,66 @@ export function AgentDetail({
                 onClick={() => setConfirmArchive(true)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Archive Agent
+                归档专家
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+      </div>
+
+      <div className="border-b px-6 py-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div>
+            <h3 className="text-sm font-semibold">职责说明</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {agent.description?.trim() || "这个专家还没有补充职责说明。"}
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">已绑定技能包</h3>
+            {agent.skills.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {agent.skills.map((skill) => (
+                  <span
+                    key={skill.id}
+                    className="rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                  >
+                    {skill.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">暂未绑定技能包</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="pt-4">
+            <h3 className="text-sm font-semibold">能力矩阵</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              当前领域：{domainMeta.label}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {capabilityLabels.map((label, index) => {
+            const isEnabled = domainMeta.capabilities[index] ?? false;
+
+            return (
+              <div
+                key={label}
+                className="flex items-center justify-between rounded-lg border bg-card px-3 py-2"
+              >
+                <span className="text-xs text-foreground">{label}</span>
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    isEnabled ? "bg-success" : "bg-muted-foreground/30"
+                  }`}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -176,15 +236,15 @@ export function AgentDetail({
                 <AlertCircle className="h-5 w-5 text-destructive" />
               </div>
               <DialogHeader className="flex-1 gap-1">
-                <DialogTitle className="text-sm font-semibold">Archive agent?</DialogTitle>
+                <DialogTitle className="text-sm font-semibold">归档这个专家？</DialogTitle>
                 <DialogDescription className="text-xs">
-                  &quot;{agent.name}&quot; will be archived. It won&apos;t be assignable or mentionable, but all history is preserved. You can restore it later.
+                  &quot;{agent.name}&quot; 会被归档。之后不能再被指派或提及，但历史记录会保留，后续也可以恢复。
                 </DialogDescription>
               </DialogHeader>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setConfirmArchive(false)}>
-                Cancel
+                取消
               </Button>
               <Button
                 variant="destructive"
@@ -193,7 +253,7 @@ export function AgentDetail({
                   onArchive(agent.id);
                 }}
               >
-                Archive
+                归档
               </Button>
             </DialogFooter>
           </DialogContent>

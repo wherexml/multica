@@ -264,6 +264,54 @@ func (q *Queries) SetAgentRuntimeOffline(ctx context.Context, id pgtype.UUID) er
 	return err
 }
 
+const updateAgentRuntime = `-- name: UpdateAgentRuntime :one
+UPDATE agent_runtime
+SET name = COALESCE($1, name),
+    status = COALESCE($2, status),
+    device_info = COALESCE($3, device_info),
+    metadata = COALESCE($4, metadata),
+    updated_at = now()
+WHERE id = $5 AND workspace_id = $6
+RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id
+`
+
+type UpdateAgentRuntimeParams struct {
+	Name        pgtype.Text `json:"name"`
+	Status      pgtype.Text `json:"status"`
+	DeviceInfo  pgtype.Text `json:"device_info"`
+	Metadata    []byte      `json:"metadata"`
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+}
+
+func (q *Queries) UpdateAgentRuntime(ctx context.Context, arg UpdateAgentRuntimeParams) (AgentRuntime, error) {
+	row := q.db.QueryRow(ctx, updateAgentRuntime,
+		arg.Name,
+		arg.Status,
+		arg.DeviceInfo,
+		arg.Metadata,
+		arg.ID,
+		arg.WorkspaceID,
+	)
+	var i AgentRuntime
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.DaemonID,
+		&i.Name,
+		&i.RuntimeMode,
+		&i.Provider,
+		&i.Status,
+		&i.DeviceInfo,
+		&i.Metadata,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
 const updateAgentRuntimeHeartbeat = `-- name: UpdateAgentRuntimeHeartbeat :one
 UPDATE agent_runtime
 SET status = 'online', last_seen_at = now(), updated_at = now()

@@ -25,9 +25,13 @@ export function DashboardGuard({
 }: DashboardGuardProps) {
   const { user, isLoading, workspace } = useDashboardGuard(loginPath);
 
+  // Show loading state while auth or workspace is being initialized
   if (isLoading || !workspace) return <>{loadingFallback}</>;
+  
+  // This should never happen due to the check above, but added for type safety
   if (!user) return null;
 
+  // Only render children when workspace is confirmed to exist
   return (
     <WorkspaceIdProvider wsId={workspace.id}>
       {children}

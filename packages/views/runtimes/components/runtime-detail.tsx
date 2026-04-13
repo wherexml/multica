@@ -10,6 +10,7 @@ import { useWorkspaceId } from "@multica/core/hooks";
 import { memberListOptions } from "@multica/core/workspace/queries";
 import { useDeleteRuntime } from "@multica/core/runtimes/mutations";
 import { Button } from "@multica/ui/components/ui/button";
+import { Badge } from "@multica/ui/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +23,86 @@ import {
 } from "@multica/ui/components/ui/alert-dialog";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { formatLastSeen } from "../utils";
-import { StatusBadge, InfoField } from "./shared";
+import { InfoField } from "./shared";
 import { ProviderLogo } from "./provider-logo";
 import { PingSection } from "./ping-section";
 import { UpdateSection } from "./update-section";
 import { UsageSection } from "./usage-section";
+
+type RuntimeExecutor = {
+  executor_kind?: string;
+  resource_quota?: Record<string, unknown> | null;
+};
+
+type RuntimeWithExecutor = AgentRuntime & {
+  executor?: RuntimeExecutor | null;
+};
+
+const statusLabelMap: Record<string, string> = {
+  online: "在线",
+  offline: "离线",
+  connected: "已连接",
+  disconnected: "已断开",
+};
+
+const providerLabelMap: Record<string, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+};
+
+const runtimeModeLabelMap: Record<string, string> = {
+  local: "本地",
+  cloud: "云端",
+};
+
+const quotaKeyLabelMap: Record<string, string> = {
+  cpu: "CPU",
+  memory: "Memory",
+  timeout: "Timeout",
+};
+
+function getExecutor(runtime: AgentRuntime): RuntimeExecutor | null {
+  return (runtime as RuntimeWithExecutor).executor ?? null;
+}
+
+function getStatusLabel(status: string): string {
+  return statusLabelMap[status] ?? status;
+}
+
+function getProviderLabel(provider: string): string {
+  return providerLabelMap[provider] ?? provider;
+}
+
+function getRuntimeModeLabel(mode: string): string {
+  return runtimeModeLabelMap[mode] ?? mode;
+}
+
+function formatQuotaKey(key: string): string {
+  return quotaKeyLabelMap[key] ?? key
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatQuotaValue(value: unknown): string {
+  if (value == null) return "未配置";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const isOnline = status === "online" || status === "connected";
+
+  return (
+    <Badge
+      variant="secondary"
+      className={isOnline ? "bg-success/10 text-success" : ""}
+    >
+      {getStatusLabel(status)}
+    </Badge>
+  );
+}
 
 function getCliVersion(metadata: Record<string, unknown>): string | null {
   if (
@@ -42,6 +118,10 @@ function getCliVersion(metadata: Record<string, unknown>): string | null {
 export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
   const cliVersion =
     runtime.runtime_mode === "local" ? getCliVersion(runtime.metadata) : null;
+  const executor = getExecutor(runtime);
+  const quotaEntries = executor?.resource_quota
+    ? Object.entries(executor.resource_quota)
+    : [];
 
   const user = useAuthStore((s) => s.user);
   const wsId = useWorkspaceId();
@@ -68,11 +148,11 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
   const handleDelete = () => {
     deleteMutation.mutate(runtime.id, {
       onSuccess: () => {
-        toast.success("Runtime deleted");
+        toast.success("执行环境已删除");
         setDeleteOpen(false);
       },
       onError: (e) => {
-        toast.error(e instanceof Error ? e.message : "Failed to delete runtime");
+        toast.error(e instanceof Error ? e.message : "删除执行环境失败");
       },
     });
   };
@@ -108,16 +188,16 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Info grid */}
         <div className="grid grid-cols-2 gap-4">
-          <InfoField label="Runtime Mode" value={runtime.runtime_mode} />
-          <InfoField label="Provider" value={runtime.provider} />
-          <InfoField label="Status" value={runtime.status} />
+          <InfoField label="运行模式" value={getRuntimeModeLabel(runtime.runtime_mode)} />
+          <InfoField label="提供方" value={getProviderLabel(runtime.provider)} />
+          <InfoField label="状态" value={getStatusLabel(runtime.status)} />
           <InfoField
-            label="Last Seen"
+            label="最近在线"
             value={formatLastSeen(runtime.last_seen_at)}
           />
           {ownerMember && (
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Owner</div>
+              <div className="text-xs text-muted-foreground mb-1">负责人</div>
               <div className="flex items-center gap-2">
                 <ActorAvatar
                   actorType="member"
@@ -129,18 +209,44 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
             </div>
           )}
           {runtime.device_info && (
-            <InfoField label="Device" value={runtime.device_info} />
+            <InfoField label="设备" value={runtime.device_info} />
           )}
           {runtime.daemon_id && (
             <InfoField label="Daemon ID" value={runtime.daemon_id} mono />
           )}
         </div>
 
+        {/* Resource quota */}
+        <div>
+          <h3 className="text-xs font-medium text-muted-foreground mb-3">
+            资源配额
+          </h3>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            {quotaEntries.length === 0 ? (
+              <div className="text-sm text-muted-foreground">未配置</div>
+            ) : (
+              <div className="space-y-2">
+                {quotaEntries.map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between gap-4 text-sm"
+                  >
+                    <span className="text-muted-foreground">{formatQuotaKey(key)}</span>
+                    <span className="font-medium text-right break-all">
+                      {formatQuotaValue(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* CLI Version & Update */}
         {runtime.runtime_mode === "local" && (
           <div>
             <h3 className="text-xs font-medium text-muted-foreground mb-3">
-              CLI Version
+              CLI 版本
             </h3>
             <UpdateSection
               runtimeId={runtime.id}
@@ -153,7 +259,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
         {/* Connection Test */}
         <div>
           <h3 className="text-xs font-medium text-muted-foreground mb-3">
-            Connection Test
+            连接测试
           </h3>
           <PingSection runtimeId={runtime.id} />
         </div>
@@ -161,7 +267,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
         {/* Usage */}
         <div>
           <h3 className="text-xs font-medium text-muted-foreground mb-3">
-            Token Usage
+            Token 用量
           </h3>
           <UsageSection runtimeId={runtime.id} />
         </div>
@@ -170,7 +276,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
         {runtime.metadata && Object.keys(runtime.metadata).length > 0 && (
           <div>
             <h3 className="text-xs font-medium text-muted-foreground mb-2">
-              Metadata
+              元数据
             </h3>
             <div className="rounded-lg border bg-muted/30 p-3">
               <pre className="text-xs font-mono whitespace-pre-wrap break-all">
@@ -183,11 +289,11 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
         {/* Timestamps */}
         <div className="grid grid-cols-2 gap-4 border-t pt-4">
           <InfoField
-            label="Created"
+            label="创建时间"
             value={new Date(runtime.created_at).toLocaleString()}
           />
           <InfoField
-            label="Updated"
+            label="更新时间"
             value={new Date(runtime.updated_at).toLocaleString()}
           />
         </div>
@@ -197,19 +303,19 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
       <AlertDialog open={deleteOpen} onOpenChange={(v) => { if (!v) setDeleteOpen(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Runtime</AlertDialogTitle>
+            <AlertDialogTitle>删除执行环境</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &ldquo;{runtime.name}&rdquo;? This action cannot be undone.
+              确认删除 &ldquo;{runtime.name}&rdquo; 吗？这个操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? "删除中..." : "删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

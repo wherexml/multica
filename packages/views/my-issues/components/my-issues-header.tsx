@@ -36,10 +36,11 @@ import {
 import { Switch } from "@multica/ui/components/ui/switch";
 import {
   ALL_STATUSES,
-  STATUS_CONFIG,
   PRIORITY_ORDER,
-  PRIORITY_CONFIG,
+  getIssuePriorityLabel,
+  getIssueStatusLabel,
 } from "@multica/core/issues/config";
+import { getClientLocale } from "@multica/core/platform";
 import { StatusIcon, PriorityIcon } from "../../issues/components";
 import {
   SORT_OPTIONS,
@@ -47,7 +48,7 @@ import {
 } from "@multica/core/issues/stores/view-store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
 import type { Issue } from "@multica/core/types";
-import { myIssuesViewStore, type MyIssuesScope } from "@multica/core/issues/stores/my-issues-view-store";
+import { myIssuesViewStore } from "@multica/core/issues/stores/my-issues-view-store";
 
 // ---------------------------------------------------------------------------
 // HoverCheck
@@ -95,21 +96,9 @@ function useIssueCounts(allIssues: Issue[]) {
   }, [allIssues]);
 }
 
-// ---------------------------------------------------------------------------
-// Scope config
-// ---------------------------------------------------------------------------
-
-const SCOPES: { value: MyIssuesScope; label: string; description: string }[] = [
-  { value: "assigned", label: "Assigned", description: "Issues assigned to me" },
-  { value: "created", label: "Created", description: "Issues I created" },
-  { value: "agents", label: "My Agents", description: "Issues assigned to my agents" },
-];
-
-// ---------------------------------------------------------------------------
-// MyIssuesHeader
-// ---------------------------------------------------------------------------
-
 export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const viewMode = useStore(myIssuesViewStore, (s) => s.viewMode);
   const statusFilters = useStore(myIssuesViewStore, (s) => s.statusFilters);
   const priorityFilters = useStore(myIssuesViewStore, (s) => s.priorityFilters);
@@ -126,12 +115,32 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
 
   const sortLabel =
     SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Manual";
+  const scopes = useMemo(
+    () => [
+      {
+        value: "assigned" as const,
+        label: isZh ? "分配给我" : "Assigned",
+        description: isZh ? "查看分配给我的待办" : "Issues assigned to me",
+      },
+      {
+        value: "created" as const,
+        label: isZh ? "我创建的" : "Created",
+        description: isZh ? "查看由我创建的待办" : "Issues I created",
+      },
+      {
+        value: "agents" as const,
+        label: isZh ? "我的 Agent" : "My Agents",
+        description: isZh ? "查看分配给我的 Agent 的待办" : "Issues assigned to my agents",
+      },
+    ],
+    [isZh],
+  );
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-4">
       {/* Left: scope buttons */}
       <div className="flex items-center gap-1">
-        {SCOPES.map((s) => (
+        {scopes.map((s) => (
           <Tooltip key={s.value}>
             <TooltipTrigger
               render={
@@ -173,14 +182,14 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                 />
               }
             />
-            <TooltipContent side="bottom">Filter</TooltipContent>
+            <TooltipContent side="bottom">{isZh ? "筛选" : "Filter"}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
             {/* Status */}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <CircleDot className="size-3.5" />
-                <span className="flex-1">Status</span>
+                <span className="flex-1">{isZh ? "状态" : "Status"}</span>
                 {statusFilters.length > 0 && (
                   <span className="text-xs text-primary font-medium">
                     {statusFilters.length}
@@ -200,10 +209,10 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                     >
                       <HoverCheck checked={checked} />
                       <StatusIcon status={s} className="h-3.5 w-3.5" />
-                      {STATUS_CONFIG[s].label}
+                      {getIssueStatusLabel(s, locale)}
                       {count > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {count} {count === 1 ? "issue" : "issues"}
+                          {isZh ? `${count} 条` : `${count} ${count === 1 ? "issue" : "issues"}`}
                         </span>
                       )}
                     </DropdownMenuCheckboxItem>
@@ -216,7 +225,7 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <SignalHigh className="size-3.5" />
-                <span className="flex-1">Priority</span>
+                <span className="flex-1">{isZh ? "优先级" : "Priority"}</span>
                 {priorityFilters.length > 0 && (
                   <span className="text-xs text-primary font-medium">
                     {priorityFilters.length}
@@ -236,10 +245,10 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                     >
                       <HoverCheck checked={checked} />
                       <PriorityIcon priority={p} />
-                      {PRIORITY_CONFIG[p].label}
+                      {getIssuePriorityLabel(p, locale)}
                       {count > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {count} {count === 1 ? "issue" : "issues"}
+                          {isZh ? `${count} 条` : `${count} ${count === 1 ? "issue" : "issues"}`}
                         </span>
                       )}
                     </DropdownMenuCheckboxItem>
@@ -253,7 +262,7 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={act.clearFilters}>
-                  Reset all filters
+                  {isZh ? "重置全部筛选" : "Reset all filters"}
                 </DropdownMenuItem>
               </>
             )}
@@ -274,12 +283,14 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                 />
               }
             />
-            <TooltipContent side="bottom">Display settings</TooltipContent>
+            <TooltipContent side="bottom">
+              {isZh ? "显示设置" : "Display settings"}
+            </TooltipContent>
           </Tooltip>
           <PopoverContent align="end" className="w-64 p-0">
             <div className="border-b px-3 py-2.5">
               <span className="text-xs font-medium text-muted-foreground">
-                Ordering
+                {isZh ? "排序方式" : "Ordering"}
               </span>
               <div className="mt-2 flex items-center gap-1.5">
                 <DropdownMenu>
@@ -327,7 +338,7 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
 
             <div className="px-3 py-2.5">
               <span className="text-xs font-medium text-muted-foreground">
-                Card properties
+                {isZh ? "卡片字段" : "Card properties"}
               </span>
               <div className="mt-2 space-y-2">
                 {CARD_PROPERTY_OPTIONS.map((opt) => (
@@ -367,19 +378,25 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
               }
             />
             <TooltipContent side="bottom">
-              {viewMode === "board" ? "Board view" : "List view"}
+              {viewMode === "board"
+                ? isZh
+                  ? "看板视图"
+                  : "Board view"
+                : isZh
+                  ? "列表视图"
+                  : "List view"}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>View</DropdownMenuLabel>
+              <DropdownMenuLabel>{isZh ? "视图" : "View"}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => act.setViewMode("board")}>
                 <Columns3 />
-                Board
+                {isZh ? "看板" : "Board"}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => act.setViewMode("list")}>
                 <List />
-                List
+                {isZh ? "列表" : "List"}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

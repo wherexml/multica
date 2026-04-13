@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Bot,
   Check,
   ChevronDown,
   CircleDot,
@@ -61,7 +62,22 @@ import {
   type IssuesScope,
 } from "@multica/core/issues/stores/issues-scope-store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import type { Issue } from "@multica/core/types";
+import { t } from "@multica/core/platform";
+import {
+  DECISION_EXECUTION_MODES,
+  DECISION_PHASES,
+  DECISION_RISK_LEVELS,
+  type DecisionExecutionMode,
+  type DecisionPhase,
+  type DecisionRiskLevel,
+  type Issue,
+} from "@multica/core/types";
+import {
+  DECISION_EXECUTION_MODE_LABELS,
+  DECISION_PHASE_LABELS,
+  DECISION_RISK_LEVEL_LABELS,
+  DecisionExecutionModeIcon,
+} from "./decision-case-meta";
 
 // ---------------------------------------------------------------------------
 // HoverCheck — shadcn official pattern (PR #6862)
@@ -69,6 +85,37 @@ import type { Issue } from "@multica/core/types";
 
 const FILTER_ITEM_CLASS =
   "group/fitem pr-1.5! [&>[data-slot=dropdown-menu-checkbox-item-indicator]]:hidden";
+const SEARCH_INPUT_CLASS =
+  "w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none";
+
+type SearchableFilterOption<T extends string> = {
+  value: T;
+  label: string;
+  count: number;
+  icon?: ReactNode;
+};
+
+const PHASE_FILTER_OPTIONS: SearchableFilterOption<DecisionPhase>[] =
+  DECISION_PHASES.map((value) => ({
+    value,
+    label: DECISION_PHASE_LABELS[value],
+    count: 0,
+  }));
+
+const RISK_LEVEL_FILTER_OPTIONS: SearchableFilterOption<DecisionRiskLevel>[] =
+  DECISION_RISK_LEVELS.map((value) => ({
+    value,
+    label: DECISION_RISK_LEVEL_LABELS[value],
+    count: 0,
+  }));
+
+const EXECUTION_MODE_FILTER_OPTIONS: SearchableFilterOption<DecisionExecutionMode>[] =
+  DECISION_EXECUTION_MODES.map((value) => ({
+    value,
+    label: DECISION_EXECUTION_MODE_LABELS[value],
+    count: 0,
+    icon: <DecisionExecutionModeIcon mode={value} className="size-3.5 text-muted-foreground" />,
+  }));
 
 function HoverCheck({ checked }: { checked: boolean }) {
   return (
@@ -93,6 +140,11 @@ function getActiveFilterCount(state: {
   creatorFilters: ActorFilterValue[];
   projectFilters: string[];
   includeNoProject: boolean;
+  phaseFilters: string[];
+  riskLevelFilters: string[];
+  executionModeFilters: string[];
+  decisionTypeFilters: string[];
+  objectTypeFilters: string[];
 }) {
   let count = 0;
   if (state.statusFilters.length > 0) count++;
@@ -100,6 +152,11 @@ function getActiveFilterCount(state: {
   if (state.assigneeFilters.length > 0 || state.includeNoAssignee) count++;
   if (state.creatorFilters.length > 0) count++;
   if (state.projectFilters.length > 0 || state.includeNoProject) count++;
+  if (state.phaseFilters.length > 0) count++;
+  if (state.riskLevelFilters.length > 0) count++;
+  if (state.executionModeFilters.length > 0) count++;
+  if (state.decisionTypeFilters.length > 0) count++;
+  if (state.objectTypeFilters.length > 0) count++;
   return count;
 }
 
@@ -110,6 +167,11 @@ function useIssueCounts(allIssues: Issue[]) {
     const assignee = new Map<string, number>();
     const creator = new Map<string, number>();
     const project = new Map<string, number>();
+    const phase = new Map<string, number>();
+    const riskLevel = new Map<string, number>();
+    const executionMode = new Map<string, number>();
+    const decisionType = new Map<string, number>();
+    const objectType = new Map<string, number>();
     let noAssignee = 0;
     let noProject = 0;
 
@@ -132,9 +194,48 @@ function useIssueCounts(allIssues: Issue[]) {
       } else {
         project.set(issue.project_id, (project.get(issue.project_id) ?? 0) + 1);
       }
+
+      if (issue.phase) {
+        phase.set(issue.phase, (phase.get(issue.phase) ?? 0) + 1);
+      }
+
+      if (issue.risk_level) {
+        riskLevel.set(issue.risk_level, (riskLevel.get(issue.risk_level) ?? 0) + 1);
+      }
+
+      if (issue.execution_mode) {
+        executionMode.set(
+          issue.execution_mode,
+          (executionMode.get(issue.execution_mode) ?? 0) + 1,
+        );
+      }
+
+      if (issue.decision_type) {
+        decisionType.set(
+          issue.decision_type,
+          (decisionType.get(issue.decision_type) ?? 0) + 1,
+        );
+      }
+
+      if (issue.object_type) {
+        objectType.set(issue.object_type, (objectType.get(issue.object_type) ?? 0) + 1);
+      }
     }
 
-    return { status, priority, assignee, creator, noAssignee, project, noProject };
+    return {
+      status,
+      priority,
+      assignee,
+      creator,
+      noAssignee,
+      project,
+      noProject,
+      phase,
+      riskLevel,
+      executionMode,
+      decisionType,
+      objectType,
+    };
   }, [allIssues]);
 }
 
@@ -191,8 +292,8 @@ function ActorSubContent({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter..."
-          className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
+          placeholder="筛选..."
+          className={SEARCH_INPUT_CLASS}
           autoFocus
         />
       </div>
@@ -200,14 +301,14 @@ function ActorSubContent({
       <div className="max-h-64 overflow-y-auto p-1">
         {showNoAssignee &&
           (!query || "no assignee".includes(query) || "unassigned".includes(query)) && (
-            <DropdownMenuCheckboxItem
+          <DropdownMenuCheckboxItem
               checked={includeNoAssignee ?? false}
               onCheckedChange={() => onToggleNoAssignee?.()}
               className={FILTER_ITEM_CLASS}
             >
               <HoverCheck checked={includeNoAssignee ?? false} />
               <UserMinus className="size-3.5 text-muted-foreground" />
-              No assignee
+              未分配负责人
               {(noAssigneeCount ?? 0) > 0 && (
                 <span className="ml-auto text-xs text-muted-foreground">
                   {noAssigneeCount}
@@ -218,7 +319,7 @@ function ActorSubContent({
 
         {filteredMembers.length > 0 && (
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Members</DropdownMenuLabel>
+            <DropdownMenuLabel>成员</DropdownMenuLabel>
             {filteredMembers.map((m) => {
               const checked = isSelected("member", m.user_id);
               const count = counts.get(`member:${m.user_id}`) ?? 0;
@@ -247,7 +348,7 @@ function ActorSubContent({
 
         {filteredAgents.length > 0 && (
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Agents</DropdownMenuLabel>
+            <DropdownMenuLabel>专家 Agent</DropdownMenuLabel>
             {filteredAgents.map((a) => {
               const checked = isSelected("agent", a.id);
               const count = counts.get(`agent:${a.id}`) ?? 0;
@@ -276,7 +377,7 @@ function ActorSubContent({
 
         {filteredMembers.length === 0 && filteredAgents.length === 0 && search && (
           <div className="px-2 py-3 text-center text-sm text-muted-foreground">
-            No results
+            无结果
           </div>
         )}
       </div>
@@ -318,8 +419,8 @@ function ProjectSubContent({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter..."
-          className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
+          placeholder="筛选..."
+          className={SEARCH_INPUT_CLASS}
           autoFocus
         />
       </div>
@@ -333,7 +434,7 @@ function ProjectSubContent({
           >
             <HoverCheck checked={includeNoProject} />
             <FolderMinus className="size-3.5 text-muted-foreground" />
-            No project
+            未归属专题
             {noProjectCount > 0 && (
               <span className="ml-auto text-xs text-muted-foreground">
                 {noProjectCount}
@@ -368,7 +469,71 @@ function ProjectSubContent({
 
         {filtered.length === 0 && search && (
           <div className="px-2 py-3 text-center text-sm text-muted-foreground">
-            No results
+            无结果
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function SearchableFilterSubContent<T extends string>({
+  options,
+  selected,
+  onToggle,
+  placeholder = "筛选...",
+}: {
+  options: SearchableFilterOption<T>[];
+  selected: T[];
+  onToggle: (value: T) => void;
+  placeholder?: string;
+}) {
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      option.label.toLowerCase().includes(query) ||
+      option.value.toLowerCase().includes(query),
+  );
+
+  return (
+    <>
+      <div className="border-b border-foreground/5 px-2 py-1.5">
+        <input
+          type="text"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={placeholder}
+          className={SEARCH_INPUT_CLASS}
+          autoFocus
+        />
+      </div>
+
+      <div className="max-h-64 overflow-y-auto p-1">
+        {filteredOptions.map((option) => {
+          const checked = selected.includes(option.value);
+          return (
+            <DropdownMenuCheckboxItem
+              key={option.value}
+              checked={checked}
+              onCheckedChange={() => onToggle(option.value)}
+              className={FILTER_ITEM_CLASS}
+            >
+              <HoverCheck checked={checked} />
+              {option.icon}
+              <span className="truncate">{option.label}</span>
+              {option.count > 0 && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {option.count}
+                </span>
+              )}
+            </DropdownMenuCheckboxItem>
+          );
+        })}
+
+        {filteredOptions.length === 0 && (
+          <div className="px-2 py-3 text-center text-sm text-muted-foreground">
+            {query ? "无结果" : "暂无可筛选项"}
           </div>
         )}
       </div>
@@ -392,12 +557,55 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
   const creatorFilters = useViewStore((s) => s.creatorFilters);
   const projectFilters = useViewStore((s) => s.projectFilters);
   const includeNoProject = useViewStore((s) => s.includeNoProject);
+  const phaseFilters = useViewStore((s) => s.phaseFilters);
+  const riskLevelFilters = useViewStore((s) => s.riskLevelFilters);
+  const executionModeFilters = useViewStore((s) => s.executionModeFilters);
+  const decisionTypeFilters = useViewStore((s) => s.decisionTypeFilters);
+  const objectTypeFilters = useViewStore((s) => s.objectTypeFilters);
   const sortBy = useViewStore((s) => s.sortBy);
   const sortDirection = useViewStore((s) => s.sortDirection);
   const cardProperties = useViewStore((s) => s.cardProperties);
   const act = useViewStoreApi().getState();
 
   const counts = useIssueCounts(scopedIssues);
+  const phaseOptions = useMemo(
+    () =>
+      PHASE_FILTER_OPTIONS.map((option) => ({
+        ...option,
+        count: counts.phase.get(option.value) ?? 0,
+      })),
+    [counts.phase],
+  );
+  const riskLevelOptions = useMemo(
+    () =>
+      RISK_LEVEL_FILTER_OPTIONS.map((option) => ({
+        ...option,
+        count: counts.riskLevel.get(option.value) ?? 0,
+      })),
+    [counts.riskLevel],
+  );
+  const executionModeOptions = useMemo(
+    () =>
+      EXECUTION_MODE_FILTER_OPTIONS.map((option) => ({
+        ...option,
+        count: counts.executionMode.get(option.value) ?? 0,
+      })),
+    [counts.executionMode],
+  );
+  const decisionTypeOptions = useMemo(
+    () =>
+      Array.from(counts.decisionType.entries())
+        .sort(([left], [right]) => left.localeCompare(right, "zh-CN"))
+        .map(([value, count]) => ({ value, label: value, count })),
+    [counts.decisionType],
+  );
+  const objectTypeOptions = useMemo(
+    () =>
+      Array.from(counts.objectType.entries())
+        .sort(([left], [right]) => left.localeCompare(right, "zh-CN"))
+        .map(([value, count]) => ({ value, label: value, count })),
+    [counts.objectType],
+  );
 
   const hasActiveFilters =
     getActiveFilterCount({
@@ -408,10 +616,15 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
       creatorFilters,
       projectFilters,
       includeNoProject,
+      phaseFilters,
+      riskLevelFilters,
+      executionModeFilters,
+      decisionTypeFilters,
+      objectTypeFilters,
     }) > 0;
 
   const sortLabel =
-    SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Manual";
+    SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "手动";
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-4">
@@ -459,14 +672,14 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                 />
               }
             />
-            <TooltipContent side="bottom">Filter</TooltipContent>
+            <TooltipContent side="bottom">筛选</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
             {/* Status */}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <CircleDot className="size-3.5" />
-                <span className="flex-1">Status</span>
+                <span className="flex-1">状态</span>
                 {statusFilters.length > 0 && (
                   <span className="text-xs text-primary font-medium">
                     {statusFilters.length}
@@ -489,7 +702,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                       {STATUS_CONFIG[s].label}
                       {count > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {count} {count === 1 ? "issue" : "issues"}
+                          {count} 条
                         </span>
                       )}
                     </DropdownMenuCheckboxItem>
@@ -502,7 +715,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <SignalHigh className="size-3.5" />
-                <span className="flex-1">Priority</span>
+                <span className="flex-1">优先级</span>
                 {priorityFilters.length > 0 && (
                   <span className="text-xs text-primary font-medium">
                     {priorityFilters.length}
@@ -525,7 +738,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                       {PRIORITY_CONFIG[p].label}
                       {count > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {count} {count === 1 ? "issue" : "issues"}
+                          {count} 条
                         </span>
                       )}
                     </DropdownMenuCheckboxItem>
@@ -538,7 +751,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <User className="size-3.5" />
-                <span className="flex-1">Assignee</span>
+                <span className="flex-1">负责人</span>
                 {(assigneeFilters.length > 0 || includeNoAssignee) && (
                   <span className="text-xs text-primary font-medium">
                     {assigneeFilters.length + (includeNoAssignee ? 1 : 0)}
@@ -562,7 +775,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <UserPen className="size-3.5" />
-                <span className="flex-1">Creator</span>
+                <span className="flex-1">创建人</span>
                 {creatorFilters.length > 0 && (
                   <span className="text-xs text-primary font-medium">
                     {creatorFilters.length}
@@ -582,7 +795,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderKanban className="size-3.5" />
-                <span className="flex-1">Project</span>
+                <span className="flex-1">{t("project")}</span>
                 {(projectFilters.length > 0 || includeNoProject) && (
                   <span className="text-xs text-primary font-medium">
                     {projectFilters.length + (includeNoProject ? 1 : 0)}
@@ -601,12 +814,114 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
+            {/* Phase */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <CircleDot className="size-3.5" />
+                <span className="flex-1">{t("phase")}</span>
+                {phaseFilters.length > 0 && (
+                  <span className="text-xs font-medium text-primary">
+                    {phaseFilters.length}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-auto min-w-52 p-0">
+                <SearchableFilterSubContent
+                  options={phaseOptions}
+                  selected={phaseFilters}
+                  onToggle={act.togglePhaseFilter}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Risk level */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <SignalHigh className="size-3.5" />
+                <span className="flex-1">{t("riskLevel")}</span>
+                {riskLevelFilters.length > 0 && (
+                  <span className="text-xs font-medium text-primary">
+                    {riskLevelFilters.length}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-auto min-w-52 p-0">
+                <SearchableFilterSubContent
+                  options={riskLevelOptions}
+                  selected={riskLevelFilters}
+                  onToggle={act.toggleRiskLevelFilter}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Execution mode */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Bot className="size-3.5" />
+                <span className="flex-1">{t("executionMode")}</span>
+                {executionModeFilters.length > 0 && (
+                  <span className="text-xs font-medium text-primary">
+                    {executionModeFilters.length}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-auto min-w-52 p-0">
+                <SearchableFilterSubContent
+                  options={executionModeOptions}
+                  selected={executionModeFilters}
+                  onToggle={act.toggleExecutionModeFilter}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Decision type */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <CircleDot className="size-3.5" />
+                <span className="flex-1">{t("decisionType")}</span>
+                {decisionTypeFilters.length > 0 && (
+                  <span className="text-xs font-medium text-primary">
+                    {decisionTypeFilters.length}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-auto min-w-52 p-0">
+                <SearchableFilterSubContent
+                  options={decisionTypeOptions}
+                  selected={decisionTypeFilters}
+                  onToggle={act.toggleDecisionTypeFilter}
+                  placeholder="筛选决策类型..."
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Object type */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <CircleDot className="size-3.5" />
+                <span className="flex-1">{t("objectType")}</span>
+                {objectTypeFilters.length > 0 && (
+                  <span className="text-xs font-medium text-primary">
+                    {objectTypeFilters.length}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-auto min-w-52 p-0">
+                <SearchableFilterSubContent
+                  options={objectTypeOptions}
+                  selected={objectTypeFilters}
+                  onToggle={act.toggleObjectTypeFilter}
+                  placeholder="筛选对象类型..."
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
             {/* Reset */}
             {hasActiveFilters && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={act.clearFilters}>
-                  Reset all filters
+                  重置全部筛选
                 </DropdownMenuItem>
               </>
             )}
@@ -627,12 +942,12 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                 />
               }
             />
-            <TooltipContent side="bottom">Display settings</TooltipContent>
+            <TooltipContent side="bottom">显示设置</TooltipContent>
           </Tooltip>
           <PopoverContent align="end" className="w-64 p-0">
             <div className="border-b px-3 py-2.5">
               <span className="text-xs font-medium text-muted-foreground">
-                Ordering
+                排序方式
               </span>
               <div className="mt-2 flex items-center gap-1.5">
                 <DropdownMenu>
@@ -665,7 +980,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                   onClick={() =>
                     act.setSortDirection(sortDirection === "asc" ? "desc" : "asc")
                   }
-                  title={sortDirection === "asc" ? "Ascending" : "Descending"}
+                  title={sortDirection === "asc" ? "升序" : "降序"}
                 >
                   {sortDirection === "asc" ? (
                     <ArrowUp className="size-3.5" />
@@ -678,7 +993,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
 
             <div className="px-3 py-2.5">
               <span className="text-xs font-medium text-muted-foreground">
-                Card properties
+                卡片显示
               </span>
               <div className="mt-2 space-y-2">
                 {CARD_PROPERTY_OPTIONS.map((opt) => (
@@ -718,19 +1033,19 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
               }
             />
             <TooltipContent side="bottom">
-              {viewMode === "board" ? "Board view" : "List view"}
+              {viewMode === "board" ? "看板视图" : "列表视图"}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>View</DropdownMenuLabel>
+              <DropdownMenuLabel>视图</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => act.setViewMode("board")}>
                 <Columns3 />
-                Board
+                看板
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => act.setViewMode("list")}>
                 <List />
-                List
+                列表
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

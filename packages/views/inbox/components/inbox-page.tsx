@@ -1,80 +1,122 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useDefaultLayout } from "react-resizable-panels";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDefaultLayout } from "react-resizable-panels";
+import { useAuthStore } from "@multica/core/auth";
+import { api } from "@multica/core/api";
 import { useWorkspaceId } from "@multica/core/hooks";
 import {
-  inboxListOptions,
-  deduplicateInboxItems,
-} from "@multica/core/inbox/queries";
-import {
-  useMarkInboxRead,
-  useArchiveInbox,
-  useMarkAllInboxRead,
   useArchiveAllInbox,
   useArchiveAllReadInbox,
   useArchiveCompletedInbox,
+  useArchiveInbox,
+  useMarkAllInboxRead,
+  useMarkInboxRead,
 } from "@multica/core/inbox/mutations";
-import { IssueDetail } from "../../issues/components";
-import { useNavigation } from "../../navigation";
-import { toast } from "sonner";
-import {
-  MoreHorizontal,
-  Inbox,
-  CheckCheck,
-  Archive,
-  BookCheck,
-  ListChecks,
-  ArrowLeft,
-} from "lucide-react";
+import { inboxListOptions } from "@multica/core/inbox/queries";
+import { useModalStore } from "@multica/core/modals";
+import { t } from "@multica/core/platform";
 import type { InboxItem } from "@multica/core/types";
 import { Button } from "@multica/ui/components/ui/button";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@multica/ui/components/ui/dropdown-menu";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@multica/ui/components/ui/resizable";
+import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { useIsMobile } from "@multica/ui/hooks/use-mobile";
-import { InboxListItem, timeAgo } from "./inbox-list-item";
+import {
+  Archive,
+  ArrowLeft,
+  BookCheck,
+  CheckCheck,
+  Inbox,
+  ListChecks,
+  MoreHorizontal,
+} from "lucide-react";
+import { toast } from "sonner";
+import { myIssueListOptions as buildMyIssueListOptions } from "@multica/core/issues/queries";
+import { IssueDetail } from "../../issues/components";
+import { useNavigation } from "../../navigation";
+import { InboxDashboard } from "./inbox-dashboard";
 import { typeLabels } from "./inbox-detail-label";
+import { getRecentActivityItems } from "./inbox-dashboard-helpers";
+import { timeAgo } from "./inbox-list-item";
 
 export function InboxPage() {
-  const { searchParams, replace } = useNavigation();
+  const { push, replace, searchParams } = useNavigation();
   const urlIssue = searchParams.get("issue") ?? "";
+  const user = useAuthStore((state) => state.user);
+  const wsId = useWorkspaceId();
+  const isMobile = useIsMobile();
 
-  const [selectedKey, setSelectedKeyState] = useState(() => urlIssue);
+  const [selectedKey, setSelectedKeyState] = useState(urlIssue);
 
-  // Sync from URL when searchParams change (e.g. navigation)
   useEffect(() => {
     setSelectedKeyState(urlIssue);
   }, [urlIssue]);
 
-  const setSelectedKey = useCallback((key: string) => {
-    setSelectedKeyState(key);
-    const url = key ? `/inbox?issue=${key}` : "/inbox";
-    replace(url);
-  }, [replace]);
+  const setSelectedKey = useCallback(
+    (key: string) => {
+      setSelectedKeyState(key);
+      replace(key ? `/inbox?issue=${key}` : "/inbox");
+    },
+    [replace],
+  );
 
-  const wsId = useWorkspaceId();
-  const { data: rawItems = [], isLoading: loading } = useQuery(inboxListOptions(wsId));
-  const items = useMemo(() => deduplicateInboxItems(rawItems), [rawItems]);
+  const {
+    data: rawItems = [],
+    isLoading: inboxLoading,
+  } = useQuery(inboxListOptions(wsId));
+
+  const {
+    data: myIssues = [],
+    isLoading: todosLoading,
+  } = useQuery({
+    ...buildMyIssueListOptions(wsId, "dashboard-assigned", {
+      assignee_id: user?.id ?? "",
+    }),
+    enabled: Boolean(user?.id),
+  });
+
+  const {
+    data: decisions = [],
+    isLoading: decisionsLoading,
+  } = useQuery({
+    queryKey: ["decisions", wsId, "dashboard"] as const,
+    queryFn: async () => {
+      const response = await api.listDecisions({
+        page: 1,
+        page_size: 200,
+      });
+      return response.decisions;
+    },
+  });
+
+  const recentItems = useMemo(() => getRecentActivityItems(rawItems), [rawItems]);
+  const selected = useMemo(
+    () =>
+      recentItems.find((item) => (item.issue_id ?? item.id) === selectedKey) ??
+      rawItems.find((item) => item.id === selectedKey) ??
+      null,
+    [rawItems, recentItems, selectedKey],
+  );
+  const unreadCount = useMemo(
+    () => rawItems.filter((item) => !item.archived && !item.read).length,
+    [rawItems],
+  );
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "multica_inbox_layout",
   });
-
-  const isMobile = useIsMobile();
-  const selected = items.find((i) => (i.issue_id ?? i.id) === selectedKey) ?? null;
-  const unreadCount = items.filter((i) => !i.read).length;
 
   const markReadMutation = useMarkInboxRead();
   const archiveMutation = useArchiveInbox();
@@ -83,65 +125,90 @@ export function InboxPage() {
   const archiveAllReadMutation = useArchiveAllReadInbox();
   const archiveCompletedMutation = useArchiveCompletedInbox();
 
-  // Click-to-read: select + auto-mark-read
-  const handleSelect = (item: InboxItem) => {
-    setSelectedKey(item.issue_id ?? item.id);
-    if (!item.read) {
-      markReadMutation.mutate(item.id, {
-        onError: () => toast.error("Failed to mark as read"),
+  const handleSelect = useCallback(
+    (item: InboxItem) => {
+      setSelectedKey(item.issue_id ?? item.id);
+      if (!item.read) {
+        markReadMutation.mutate(item.id, {
+          onError: () => toast.error("标记已读失败"),
+        });
+      }
+    },
+    [markReadMutation, setSelectedKey],
+  );
+
+  const handleArchive = useCallback(
+    (id: string) => {
+      const archived = rawItems.find((item) => item.id === id);
+      if (archived && (archived.issue_id ?? archived.id) === selectedKey) {
+        setSelectedKey("");
+      }
+
+      archiveMutation.mutate(id, {
+        onError: () => toast.error("归档失败"),
       });
-    }
-  };
+    },
+    [archiveMutation, rawItems, selectedKey, setSelectedKey],
+  );
 
-  const handleArchive = (id: string) => {
-    const archived = items.find((i) => i.id === id);
-    if (archived && (archived.issue_id ?? archived.id) === selectedKey) setSelectedKey("");
-    archiveMutation.mutate(id, {
-      onError: () => toast.error("Failed to archive"),
-    });
-  };
-
-  // Batch operations
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = useCallback(() => {
     markAllReadMutation.mutate(undefined, {
-      onError: () => toast.error("Failed to mark all as read"),
+      onError: () => toast.error("全部标记已读失败"),
     });
-  };
+  }, [markAllReadMutation]);
 
-  const handleArchiveAll = () => {
+  const handleArchiveAll = useCallback(() => {
     setSelectedKey("");
     archiveAllMutation.mutate(undefined, {
-      onError: () => toast.error("Failed to archive all"),
+      onError: () => toast.error("全部归档失败"),
     });
-  };
+  }, [archiveAllMutation, setSelectedKey]);
 
-  const handleArchiveAllRead = () => {
-    const readKeys = items.filter((i) => i.read).map((i) => i.issue_id ?? i.id);
-    if (readKeys.includes(selectedKey)) setSelectedKey("");
+  const handleArchiveAllRead = useCallback(() => {
+    const readKeys = rawItems
+      .filter((item) => item.read)
+      .map((item) => item.issue_id ?? item.id);
+    if (readKeys.includes(selectedKey)) {
+      setSelectedKey("");
+    }
+
     archiveAllReadMutation.mutate(undefined, {
-      onError: () => toast.error("Failed to archive read items"),
+      onError: () => toast.error("归档已读失败"),
     });
-  };
+  }, [archiveAllReadMutation, rawItems, selectedKey, setSelectedKey]);
 
-  const handleArchiveCompleted = () => {
+  const handleArchiveCompleted = useCallback(() => {
     setSelectedKey("");
     archiveCompletedMutation.mutate(undefined, {
-      onError: () => toast.error("Failed to archive completed"),
+      onError: () => toast.error("归档已完成通知失败"),
     });
-  };
+  }, [archiveCompletedMutation, setSelectedKey]);
 
-  // -- Shared sub-components --------------------------------------------------
+  const handleCreateDecision = useCallback(() => {
+    push("/issues");
+    queueMicrotask(() => {
+      useModalStore.getState().open("create-issue");
+    });
+  }, [push]);
+
+  const handleOpenIssue = useCallback(
+    (issueId: string) => {
+      push(`/issues/${issueId}`);
+    },
+    [push],
+  );
 
   const listHeader = (
     <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
       <div className="flex items-center gap-2">
-        <h1 className="text-sm font-semibold">Inbox</h1>
+        <h1 className="text-sm font-semibold">{t("inbox")}</h1>
         {unreadCount > 0 && (
           <span className="text-xs text-muted-foreground">
-            {unreadCount}
+            {unreadCount} 条未读
           </span>
         )}
       </div>
+
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -154,45 +221,26 @@ export function InboxPage() {
         >
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-auto">
+        <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleMarkAllRead}>
             <CheckCheck className="h-4 w-4" />
-            Mark all as read
+            全部标记已读
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleArchiveAll}>
             <Archive className="h-4 w-4" />
-            Archive all
+            全部归档
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleArchiveAllRead}>
             <BookCheck className="h-4 w-4" />
-            Archive all read
+            归档已读
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleArchiveCompleted}>
             <ListChecks className="h-4 w-4" />
-            Archive completed
+            归档已完成
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
-  );
-
-  const listBody = items.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-      <Inbox className="mb-3 h-8 w-8 text-muted-foreground/50" />
-      <p className="text-sm">No notifications</p>
-    </div>
-  ) : (
-    <div>
-      {items.map((item) => (
-        <InboxListItem
-          key={item.id}
-          item={item}
-          isSelected={(item.issue_id ?? item.id) === selectedKey}
-          onClick={() => handleSelect(item)}
-          onArchive={() => handleArchive(item.id)}
-        />
-      ))}
     </div>
   );
 
@@ -203,9 +251,7 @@ export function InboxPage() {
       defaultSidebarOpen={false}
       layoutId="multica_inbox_issue_detail_layout"
       highlightCommentId={selected.details?.comment_id ?? undefined}
-      onDelete={() => {
-        handleArchive(selected.id);
-      }}
+      onDelete={() => handleArchive(selected.id)}
     />
   ) : selected ? (
     <div className="p-6">
@@ -225,40 +271,32 @@ export function InboxPage() {
           onClick={() => handleArchive(selected.id)}
         >
           <Archive className="mr-1.5 h-3.5 w-3.5" />
-          Archive
+          归档
         </Button>
       </div>
     </div>
   ) : null;
 
-  // -- Mobile layout: list / detail toggle -----------------------------------
+  const dashboardContent = (
+    <InboxDashboard
+      inboxItems={rawItems}
+      myIssues={myIssues}
+      decisions={decisions}
+      inboxLoading={inboxLoading}
+      todosLoading={todosLoading}
+      decisionsLoading={decisionsLoading}
+      selectedKey={selectedKey}
+      onSelectItem={handleSelect}
+      onArchiveItem={handleArchive}
+      onCreateDecision={handleCreateDecision}
+      onOpenIssue={handleOpenIssue}
+    />
+  );
 
   if (isMobile) {
-    if (loading) {
-      return (
-        <div className="flex flex-1 flex-col min-h-0">
-          <div className="flex h-12 shrink-0 items-center border-b px-4">
-            <Skeleton className="h-5 w-16" />
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-1 p-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // Mobile: show detail full-screen when an item is selected
     if (selected) {
       return (
-        <div className="flex flex-1 flex-col min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex h-12 shrink-0 items-center border-b px-2">
             <Button
               variant="ghost"
@@ -267,85 +305,60 @@ export function InboxPage() {
               className="gap-1.5 text-muted-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              Inbox
+              {t("inbox")}
             </Button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {detailContent}
-          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{detailContent}</div>
         </div>
       );
     }
 
-    // Mobile: full-screen list
     return (
-      <div className="flex flex-1 flex-col min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         {listHeader}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {listBody}
-        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{dashboardContent}</div>
       </div>
-    );
-  }
-
-  // -- Desktop layout: resizable two-panel -----------------------------------
-
-  if (loading) {
-    return (
-      <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-        <ResizablePanel id="list" defaultSize={320} minSize={240} maxSize={480} groupResizeBehavior="preserve-pixel-size">
-          <div className="flex flex-col border-r h-full">
-            <div className="flex h-12 shrink-0 items-center border-b px-4">
-              <Skeleton className="h-5 w-16" />
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-1 p-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel id="detail" minSize="40%">
-          <div className="p-6">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="mt-4 h-4 w-32" />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
     );
   }
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-      <ResizablePanel id="list" defaultSize={320} minSize={240} maxSize={480} groupResizeBehavior="preserve-pixel-size">
-      <div className="flex flex-col border-r h-full">
-        {listHeader}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {listBody}
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="flex-1 min-h-0"
+      defaultLayout={defaultLayout}
+      onLayoutChanged={onLayoutChanged}
+    >
+      <ResizablePanel
+        id="dashboard"
+        defaultSize={440}
+        minSize={320}
+        maxSize={720}
+        groupResizeBehavior="preserve-pixel-size"
+      >
+        <div className="flex h-full flex-col border-r">
+          {listHeader}
+          <div className="min-h-0 flex-1 overflow-y-auto">{dashboardContent}</div>
         </div>
-      </div>
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel id="detail" minSize="40%">
-      <div className="flex flex-col min-h-0 h-full">
-        {detailContent ?? (
-          <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-            <Inbox className="mb-3 h-10 w-10 text-muted-foreground/30" />
-            <p className="text-sm">
-              {items.length === 0
-                ? "Your inbox is empty"
-                : "Select a notification to view details"}
-            </p>
-          </div>
-        )}
-      </div>
+      <ResizablePanel id="detail" minSize="35%">
+        <div className="flex h-full min-h-0 flex-col">
+          {inboxLoading && !selected ? (
+            <div className="p-6">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-4 h-4 w-28" />
+              <Skeleton className="mt-8 h-4 w-full" />
+              <Skeleton className="mt-2 h-4 w-4/5" />
+            </div>
+          ) : detailContent ?? (
+            <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+              <Inbox className="mb-3 h-10 w-10 text-muted-foreground/30" />
+              <p className="text-sm">
+                {recentItems.length === 0 ? "当前没有可查看的动态" : "选择左侧内容查看详情"}
+              </p>
+            </div>
+          )}
+        </div>
       </ResizablePanel>
     </ResizablePanelGroup>
   );

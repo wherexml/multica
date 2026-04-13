@@ -1,5 +1,6 @@
 "use client";
 
+import { getSettingsLocale, settingsT } from "@multica/core/platform";
 import { useTheme } from "@multica/ui/components/common/theme-provider";
 import { cn } from "@multica/ui/lib/utils";
 
@@ -78,20 +79,26 @@ function WindowMockup({
   );
 }
 
-const themeOptions = [
-  { value: "light" as const, label: "Light" },
-  { value: "dark" as const, label: "Dark" },
-  { value: "system" as const, label: "System" },
-];
-
 export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
+  const locale = getSettingsLocale();
+  const translate = (key: string, params?: Record<string, string>) =>
+    settingsT(key, locale, params);
+  const themeOptions = [
+    { value: "light" as const, label: translate("settings.appearance.options.light") },
+    { value: "dark" as const, label: translate("settings.appearance.options.dark") },
+    { value: "system" as const, label: translate("settings.appearance.options.system") },
+  ];
 
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold">Theme</h2>
-        <div className="flex gap-6" role="radiogroup" aria-label="Theme">
+        <h2 className="text-sm font-semibold">{translate("settings.appearance.title")}</h2>
+        <div
+          className="flex gap-6"
+          role="radiogroup"
+          aria-label={translate("settings.appearance.aria.themeGroup")}
+        >
           {themeOptions.map((opt) => {
             const active = theme === opt.value;
             return (
@@ -99,7 +106,7 @@ export function AppearanceTab() {
                 key={opt.value}
                 role="radio"
                 aria-checked={active}
-                aria-label={`Select ${opt.label} theme`}
+                aria-label={translate("settings.appearance.aria.selectTheme", { name: opt.label })}
                 onClick={() => setTheme(opt.value)}
                 className="group flex flex-col items-center gap-2"
               >

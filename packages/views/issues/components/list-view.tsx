@@ -8,8 +8,9 @@ import { Button } from "@multica/ui/components/ui/button";
 import type { Issue, IssueStatus } from "@multica/core/types";
 import { useLoadMoreDoneIssues } from "@multica/core/issues/mutations";
 import type { MyIssuesFilter } from "@multica/core/issues/queries";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
+import { STATUS_CONFIG, getIssueStatusLabel } from "@multica/core/issues/config";
 import { useModalStore } from "@multica/core/modals";
+import { getClientLocale, t } from "@multica/core/platform";
 import { useViewStore } from "@multica/core/issues/stores/view-store-context";
 import { useIssueSelectionStore } from "@multica/core/issues/stores/selection-store";
 import { sortIssues } from "../utils/sort";
@@ -26,6 +27,8 @@ export function ListView({
   doneTotal: doneTotalOverride,
   myIssuesScope,
   myIssuesFilter,
+  activeIssueId,
+  onOpenIssue,
 }: {
   issues: Issue[];
   visibleStatuses: IssueStatus[];
@@ -35,7 +38,10 @@ export function ListView({
   /** When set, use the My Issues load-more hook instead of the workspace one. */
   myIssuesScope?: string;
   myIssuesFilter?: MyIssuesFilter;
+  activeIssueId?: string;
+  onOpenIssue?: (issueId: string) => void;
 }) {
+  const locale = getClientLocale();
   const sortBy = useViewStore((s) => s.sortBy);
   const sortDirection = useViewStore((s) => s.sortDirection);
   const listCollapsedStatuses = useViewStore(
@@ -117,7 +123,7 @@ export function ListView({
                   <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-aria-expanded/trigger:rotate-90" />
                   <span className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}>
                     <StatusIcon status={status} className="h-3 w-3" inheritColor />
-                    {cfg.label}
+                    {getIssueStatusLabel(status, locale)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {status === "done" ? displayDoneTotal : statusIssues.length}
@@ -141,7 +147,7 @@ export function ListView({
                     >
                       <Plus className="size-3.5" />
                     </TooltipTrigger>
-                    <TooltipContent>Add issue</TooltipContent>
+                    <TooltipContent>新增{t("issue")}</TooltipContent>
                   </Tooltip>
                 </div>
               </Accordion.Header>
@@ -149,7 +155,13 @@ export function ListView({
                 {statusIssues.length > 0 ? (
                   <>
                     {statusIssues.map((issue) => (
-                      <ListRow key={issue.id} issue={issue} childProgress={childProgressMap.get(issue.id)} />
+                      <ListRow
+                        key={issue.id}
+                        issue={issue}
+                        childProgress={childProgressMap.get(issue.id)}
+                        active={activeIssueId === issue.id}
+                        onOpenIssue={onOpenIssue}
+                      />
                     ))}
                     {status === "done" && hasMore && (
                       <InfiniteScrollSentinel onVisible={loadMore} loading={loadingMore} />
@@ -157,7 +169,7 @@ export function ListView({
                   </>
                 ) : (
                   <p className="py-6 text-center text-xs text-muted-foreground">
-                    No issues
+                    暂无{t("issue")}
                   </p>
                 )}
               </Accordion.Panel>
