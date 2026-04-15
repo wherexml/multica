@@ -1,9 +1,16 @@
-import { Server, ArrowUpCircle, ChevronDown, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Server, ArrowUpCircle, ChevronDown, Check, Download, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { AgentRuntime, MemberWithUser } from "@multica/core/types";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { memberListOptions } from "@multica/core/workspace/queries";
 import { Badge } from "@multica/ui/components/ui/badge";
+import { Button, buttonVariants } from "@multica/ui/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@multica/ui/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -157,8 +164,15 @@ export function RuntimeList({
   onOwnerFilterChange: (ownerId: string | null) => void;
   updatableIds?: Set<string>;
 }) {
+  const [connectHost, setConnectHost] = useState("<部署 IP>");
   const wsId = useWorkspaceId();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
+
+  useEffect(() => {
+    if (window.location.hostname) {
+      setConnectHost(window.location.hostname);
+    }
+  }, []);
 
   const getOwnerMember = (ownerId: string | null) => {
     if (!ownerId) return null;
@@ -189,10 +203,53 @@ export function RuntimeList({
     <div className="overflow-y-auto h-full border-r">
       <div className="flex h-12 items-center justify-between border-b px-4">
         <h1 className="text-sm font-semibold">执行环境</h1>
-        <span className="text-xs text-muted-foreground">
-          {filteredRuntimes.filter((r) => r.status === "online").length}/
-          {filteredRuntimes.length} 在线
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {filteredRuntimes.filter((r) => r.status === "online").length}/
+            {filteredRuntimes.length} 在线
+          </span>
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" />
+              }
+            >
+              <Plus className="h-3.5 w-3.5" />
+              连接执行环境
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] space-y-3 p-4">
+              <div>
+                <div className="text-sm font-semibold">连接执行环境</div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  执行环境就是实际干活的那台机器。连接方式都一样：下载脚本，在要执行任务的机器上运行。列表里出现“在线”后，就可以把数据源或动作交给它执行。
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-medium">连接脚本</div>
+                  <a
+                    href="/connect-runtime.sh"
+                    download="connect-runtime.sh"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className: "h-7 gap-1.5 text-xs",
+                    })}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    下载连接脚本
+                  </a>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  下载后放到要接入的机器上运行。脚本会自动安装缺少的 CLI，探测前后端端口，写入配置，再启动执行环境。
+                </p>
+                <code className="mt-2 block overflow-x-auto rounded-md bg-muted px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
+                  bash connect-runtime.sh {connectHost}
+                </code>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* Filter bar */}

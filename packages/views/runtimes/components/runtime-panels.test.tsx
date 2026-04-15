@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { AgentRuntime } from "@multica/core/types";
 import { RuntimeList } from "./runtime-list";
 import { RuntimeDetail } from "./runtime-detail";
@@ -112,6 +113,54 @@ describe("Runtime panels", () => {
     expect(screen.getByRole("heading", { name: "执行环境" })).toBeInTheDocument();
     expect(screen.getByText("1/1 在线")).toBeInTheDocument();
     expect(screen.getByText("LLM 智能体")).toBeInTheDocument();
+  });
+
+  it("explains runtime connection as one unified flow", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RuntimeList
+        runtimes={[baseRuntime as RuntimeWithExecutor]}
+        selectedId={baseRuntime.id}
+        onSelect={vi.fn()}
+        filter="mine"
+        onFilterChange={vi.fn()}
+        ownerFilter={null}
+        onOwnerFilterChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "连接执行环境" }));
+
+    expect(await screen.findByText(/连接方式都一样/)).toBeInTheDocument();
+    expect(screen.getByText(/在要执行任务的机器上运行/)).toBeInTheDocument();
+    expect(screen.getByText(/列表里出现“在线”/)).toBeInTheDocument();
+    expect(screen.queryByText("连接本机")).not.toBeInTheDocument();
+    expect(screen.queryByText("连接其他机器")).not.toBeInTheDocument();
+  });
+
+  it("offers a downloadable runtime connection script", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RuntimeList
+        runtimes={[baseRuntime as RuntimeWithExecutor]}
+        selectedId={baseRuntime.id}
+        onSelect={vi.fn()}
+        filter="mine"
+        onFilterChange={vi.fn()}
+        ownerFilter={null}
+        onOwnerFilterChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "连接执行环境" }));
+
+    const link = await screen.findByRole("link", { name: "下载连接脚本" });
+    expect(link).toHaveAttribute("href", "/connect-runtime.sh");
+    expect(link).toHaveAttribute("download", "connect-runtime.sh");
+    expect(screen.getByText(/自动安装缺少的 CLI/)).toBeInTheDocument();
+    expect(screen.getByText(/bash connect-runtime.sh/)).toBeInTheDocument();
   });
 
   it("renders Chinese detail labels and resource quota content", () => {

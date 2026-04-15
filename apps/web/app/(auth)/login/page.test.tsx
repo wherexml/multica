@@ -11,6 +11,7 @@ const {
   mockListWorkspaces,
   mockSetToken,
   mockSetLoggedInCookie,
+  mockSearchParams,
 } = vi.hoisted(() => ({
   mockPush: vi.fn(),
   mockReplace: vi.fn(),
@@ -20,11 +21,12 @@ const {
   mockListWorkspaces: vi.fn(),
   mockSetToken: vi.fn(),
   mockSetLoggedInCookie: vi.fn(),
+  mockSearchParams: { current: new URLSearchParams() },
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams.current,
 }));
 
 vi.mock("@multica/core/auth", () => {
@@ -68,6 +70,7 @@ import LoginPage from "./page";
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams.current = new URLSearchParams();
     localStorage.clear();
   });
 
@@ -130,5 +133,49 @@ describe("LoginPage", () => {
     });
 
     expect(localStorage.getItem("multica_token")).toBe("token-123");
+  });
+
+  it("redirects to a private-network CLI callback after password login", async () => {
+    mockSearchParams.current = new URLSearchParams({
+      cli_callback: "http://10.0.0.206:39937/callback",
+      cli_state: "state-123",
+    });
+    const loginResponse = {
+      token: "token-123",
+      user: {
+        id: "user-1",
+        name: "Steve",
+        email: "admin@local",
+        avatar_url: null,
+        created_at: "2026-04-13T00:00:00Z",
+        updated_at: "2026-04-13T00:00:00Z",
+      },
+    };
+    mockLogin.mockResolvedValueOnce(loginResponse);
+    const originalLocation = window.location;
+    const locationAssign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { href: "", assign: locationAssign },
+    });
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(screen.getByLabelText("邮箱"), "admin@local");
+    await user.type(screen.getByLabelText("密码"), "admin123");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    await waitFor(() => {
+      expect(locationAssign).toHaveBeenCalledWith(
+        "http://10.0.0.206:39937/callback?token=token-123&state=state-123",
+      );
+    });
+
+    expect(mockListWorkspaces).not.toHaveBeenCalled();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: originalLocation,
+    });
   });
 });

@@ -20,6 +20,47 @@ import { Button } from "@multica/ui/components/ui/button";
 import { Label } from "@multica/ui/components/ui/label";
 import Link from "next/link";
 
+function isPrivateIPv4(hostname: string) {
+  const parts = hostname.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  const a = parts[0] ?? -1;
+  const b = parts[1] ?? -1;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254)
+  );
+}
+
+export function validateCliCallback(cliCallback: string): boolean {
+  try {
+    const cbUrl = new URL(cliCallback);
+    const hostname = cbUrl.hostname.toLowerCase();
+    if (cbUrl.protocol !== "http:") return false;
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]" ||
+      isPrivateIPv4(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function redirectToCliCallback(url: string, token: string, state: string) {
+  const separator = url.includes("?") ? "&" : "?";
+  window.location.assign(
+    `${url}${separator}token=${encodeURIComponent(token)}&state=${encodeURIComponent(state)}`,
+  );
+}
+
 function LoginPageContent() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -35,13 +76,22 @@ function LoginPageContent() {
     typeof window !== "undefined"
       ? localStorage.getItem("multica_workspace_id")
       : null;
+  const cliCallbackUrl = searchParams.get("cli_callback");
+  const cliState = searchParams.get("cli_state") ?? "";
+  const hasCliCallback =
+    cliCallbackUrl !== null && validateCliCallback(cliCallbackUrl);
 
   // Already authenticated — redirect to dashboard
   useEffect(() => {
     if (!isLoading && user) {
+      const token = localStorage.getItem("multica_token");
+      if (hasCliCallback && cliCallbackUrl && token) {
+        redirectToCliCallback(cliCallbackUrl, token, cliState);
+        return;
+      }
       router.replace(searchParams.get("next") || "/issues");
     }
-  }, [isLoading, user, router, searchParams]);
+  }, [isLoading, user, router, searchParams, hasCliCallback, cliCallbackUrl, cliState]);
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +118,10 @@ function LoginPageContent() {
       api.setToken(token);
       setUser(user);
       setLoggedInCookie();
+      if (hasCliCallback && cliCallbackUrl) {
+        redirectToCliCallback(cliCallbackUrl, token, cliState);
+        return;
+      }
       const wsList = await api.listWorkspaces();
       hydrateWorkspace(wsList, lastWorkspaceId);
       router.push(searchParams.get("next") || "/issues");
