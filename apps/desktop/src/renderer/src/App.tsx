@@ -26,8 +26,8 @@ export default function App() {
   return (
     <ThemeProvider>
       <CoreProvider
-        apiBaseUrl={import.meta.env.VITE_API_URL || "http://localhost:8080"}
-        wsUrl={import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws"}
+        apiBaseUrl={import.meta.env.VITE_API_URL || "http://localhost:22201"}
+        wsUrl={import.meta.env.VITE_WS_URL || "ws://localhost:22201/ws"}
       >
         <AppContent />
       </CoreProvider>

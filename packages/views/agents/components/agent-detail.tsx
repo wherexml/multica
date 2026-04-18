@@ -5,6 +5,7 @@ import {
   Cloud,
   Monitor,
   FileText,
+  DatabaseZap,
   BookOpenText,
   ListTodo,
   Trash2,
@@ -29,9 +30,10 @@ import {
   DropdownMenuItem,
 } from "@multica/ui/components/ui/dropdown-menu";
 import { Button } from "@multica/ui/components/ui/button";
-import { statusConfig } from "../config";
+import { getAgentPresenceConfig } from "../config";
 import { AgentAvatar } from "../../common/agent-avatar";
 import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-meta";
+import { DataSourcesTab } from "./tabs/data-sources-tab";
 import { InstructionsTab } from "./tabs/instructions-tab";
 import { SkillsTab } from "./tabs/skills-tab";
 import { TriggersTab } from "./tabs/triggers-tab";
@@ -42,12 +44,13 @@ function getRuntimeDevice(agent: Agent, runtimes: RuntimeDevice[]): RuntimeDevic
   return runtimes.find((runtime) => runtime.id === agent.runtime_id);
 }
 
-type DetailTab = "instructions" | "skills" | "triggers" | "tasks" | "settings";
+type DetailTab = "instructions" | "data-sources" | "skills" | "triggers" | "tasks" | "settings";
 
 const capabilityLabels = ["数据分析", "仿真建模", "方案推荐", "执行操作", "风险评估"] as const;
 
 const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
   { id: "instructions", label: "说明", icon: FileText },
+  { id: "data-sources", label: "数据源", icon: DatabaseZap },
   { id: "skills", label: "技能", icon: BookOpenText },
   { id: "triggers", label: "触发器", icon: Clock },
   { id: "tasks", label: "任务", icon: ListTodo },
@@ -67,7 +70,7 @@ export function AgentDetail({
   onArchive: (id: string) => Promise<void>;
   onRestore: (id: string) => Promise<void>;
 }) {
-  const st = statusConfig[agent.status];
+  const st = getAgentPresenceConfig(agent.status);
   const runtimeDevice = getRuntimeDevice(agent, runtimes);
   const [activeTab, setActiveTab] = useState<DetailTab>("instructions");
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -212,6 +215,12 @@ export function AgentDetail({
           <InstructionsTab
             agent={agent}
             onSave={(instructions) => onUpdate(agent.id, { instructions })}
+          />
+        )}
+        {activeTab === "data-sources" && (
+          <DataSourcesTab
+            agent={agent}
+            runtimeName={runtimeDevice?.name}
           />
         )}
         {activeTab === "skills" && (

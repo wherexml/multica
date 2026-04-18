@@ -29,7 +29,7 @@ func main() {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://multica:multica@localhost:5432/multica?sslmode=disable"
+		dbURL = "postgres://multica:multica@localhost:22200/multica?sslmode=disable"
 	}
 
 	ctx := context.Background()

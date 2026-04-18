@@ -70,9 +70,7 @@ func createRuntimeExecutorFixture(t *testing.T, runtimeName, provider, executorK
 }
 
 func TestListAgentRuntimesIncludesExecutorFilter(t *testing.T) {
-	if runtimeTestHandler == nil {
-		t.Skip("database not available")
-	}
+	ensureRuntimeHandlerFixture(t)
 
 	sqlRuntimeID := createRuntimeExecutorFixture(t, "SQL Runner Runtime", "sql-runner", "sql_runner")
 	_ = createRuntimeExecutorFixture(t, "Python Worker Runtime", "python-worker", "python_worker")
@@ -104,9 +102,7 @@ func TestListAgentRuntimesIncludesExecutorFilter(t *testing.T) {
 }
 
 func TestGetAgentRuntimeIncludesExecutorDetails(t *testing.T) {
-	if runtimeTestHandler == nil {
-		t.Skip("database not available")
-	}
+	ensureRuntimeHandlerFixture(t)
 
 	runtimeID := createRuntimeExecutorFixture(t, "Optimizer Runtime", "optimizer", "optimizer")
 
@@ -138,9 +134,7 @@ func TestGetAgentRuntimeIncludesExecutorDetails(t *testing.T) {
 }
 
 func TestUpdateAgentRuntimeUpdatesExecutorFields(t *testing.T) {
-	if runtimeTestHandler == nil {
-		t.Skip("database not available")
-	}
+	ensureRuntimeHandlerFixture(t)
 
 	runtimeID := createRuntimeExecutorFixture(t, "Connector Runtime", "connector", "connector_action")
 

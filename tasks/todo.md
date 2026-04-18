@@ -1,3 +1,48 @@
+# FE-BE-P2-034 MCP 数据源第二期（Sources 真实 MCP 读链路）
+
+- [x] Fix the `/sources` list cache shape so create/update mutations no longer treat `{ sources, total }` as an array
+- [x] Add `source_secret`, `source_tool`, and `source_run` persistence plus sqlc queries for auth state, tool snapshots, and source-op runs
+- [x] Add `/api/sources/:id/auth`, `/tools`, `/tools/refresh`, `/tools/:toolName/call`, and `/runs/:runId` plus daemon claim/complete/fail endpoints
+- [x] Connect `Source -> Runtime -> MCP` through the daemon using the official Go SDK for streamable HTTP, SSE, and stdio transports
+- [x] Restrict tool execution to `read_only` MCP tools while surfacing `write` and `unknown` tools as visible-but-blocked
+- [x] Extend the Sources detail page with auth management, real tool list rendering, read-only tool run dialog, and latest run/result display
+- [x] Verify targeted Go tests/builds plus focused `@multica/core` / `@multica/views` type checks and Vitest coverage for the new Sources flow
+- [x] Run browser-visible verification for the full local `/sources` flow after redeploy, then record screenshots / notes
+- [ ] Decide and implement how `Source` write-capable MCP tools should map into existing connector/action governance
+
+## Review
+
+- Fixed the cache-shape bug behind `e.some is not a function` by keeping the sources query cache in the server response shape and updating mutations against that same shape.
+- Sources now persist masked auth state, discovered tool snapshots, and queued/completed source-op runs without leaking bearer or OAuth secrets back to the browser.
+- The daemon now claims source runs and performs real MCP test/discovery/tool-call work over HTTP, SSE, and stdio using the official Go SDK.
+- The UI now exposes auth update/clear actions, a real tool list, visible safety labels, a guarded run flow for read-only tools, and the latest run/result panel.
+- Browser-visible local verification passed on `http://localhost:22202/sources`: create no longer crashes, auth-save/test/tool-refresh/tool-call all work, and the tool list now auto-syncs after discovery without a manual refresh click.
+- Write-capable or safety-unknown MCP tools are intentionally blocked in this phase; governance for external-system writes is still a follow-up item.
+
+# FE-BE-P1-033 MCP 数据源第一期（Sources + MCP UI 壳子）
+
+- [x] Add the new `source` table migration and sqlc queries for workspace-scoped source CRUD and test-result persistence
+- [x] Add `/api/sources` list/create/get/update/delete/test handlers and wire them into the protected router
+- [x] Add the new `Source` / `McpSourceConfig` frontend types, API client methods, and React Query hooks
+- [x] Build the `/sources` product layer with list, detail, create/edit dialog, auto-test flow, and status display
+- [x] Add sidebar, search, web route, desktop route, and runtime-page entry wiring for the new Sources layer
+- [x] Verify targeted `@multica/core` / `@multica/views` / `@multica/web` / `@multica/desktop` type checks plus focused Vitest coverage and `go test ./internal/source`
+- [ ] Replace the current config-only MCP test with real runtime-side MCP connection attempts for HTTP / SSE / stdio transports
+- [ ] Add source tool discovery APIs and UI so the detail page can show real MCP tools instead of the current placeholder block
+- [ ] Add source auth completion flows for OAuth/Bearer secrets storage instead of only returning `needs_auth`
+- [ ] Connect `Source -> Runtime -> MCP` into real query/execution orchestration so sources can do more than save config and test shape
+- [ ] Decide and implement how `Source` should map to existing `connector` / action-run governance for write actions
+- [ ] Run browser-visible verification for `/sources` and the runtime-page “连接执行环境” entry, then record screenshots / review notes
+- [ ] Update the deeper product docs (`ARCHITECTURE.md`, `frontend.md`, `backend.md`, `database.md`, `api_contract.md`) to reflect the new Sources layer
+
+## Review
+
+- Added a first-class `Sources` layer for MCP configuration and testing, separate from `Runtimes`.
+- A source now stores runtime binding, MCP transport/auth config, connection status, error text, and last test result.
+- The current backend test path only validates config shape plus runtime-online state; it does **not** open a real MCP connection yet.
+- The current detail page intentionally keeps tools/permissions as a placeholder to avoid faking capabilities that are not wired end to end.
+- Verified with `pnpm --filter @multica/core typecheck`, `pnpm --filter @multica/views typecheck`, `pnpm --filter @multica/web typecheck`, `pnpm --filter @multica/desktop typecheck`, `pnpm --filter @multica/views exec vitest run ./sources/components/source-panels.test.tsx ./layout/app-sidebar.test.tsx ./search/search-command.test.tsx ./runtimes/components/runtime-panels.test.tsx`, `pnpm --filter @multica/core exec vitest run ./platform/lexicon.test.ts`, `cd server && go test ./internal/source`, and `cd server && go build ./cmd/server`.
+
 # FE-P1-032 登录注册页中文化与 OptiOne 品牌统一
 
 - [x] Inspect the localized auth copy requirements and current login/register coverage
@@ -48,11 +93,18 @@
 
 # DEP-P1-029 2220X 重部署与本地 Claude Agent 验证
 
-- [ ] Switch the container deployment and related docs back to the required 22200 / 22201 / 22202 ports
-- [ ] Redeploy the Docker stack and repoint local CLI/daemon to the 2220X URLs
-- [ ] Verify the local Claude runtime is online after the redeploy
+- [x] Switch the container deployment and related docs back to the required 22200 / 22201 / 22202 ports
+- [x] Redeploy the Docker stack and repoint local CLI/daemon to the 2220X URLs
+- [x] Verify the local Claude runtime is online after the redeploy
 - [ ] Create a Skill and Agent in the app and bind the Agent to the local Claude runtime
 - [ ] Run one module flow end to end with the new Agent and record the outcome
+
+## Review
+
+- Standardized the active local defaults back to PostgreSQL `22200`, backend `22201`, and frontend `22202` across the self-hosted stack, CLI local setup defaults, desktop/web fallback URLs, scripts, and the main self-hosting docs.
+- Rebuilt and restarted the local daemon against the `22201` backend, then verified the daemon health endpoint and `/api/runtimes` both report the local Claude runtime online on the restored 2220X setup.
+- Found and fixed a daemon-source drift where rebuilding from current source dropped `Gemini` from the detected local runtimes; the daemon now detects and serves `Claude`, `Codex`, `Hermes`, and `Gemini` again after rebuild.
+- Verified with `pnpm --filter @multica/web exec vitest run next.config.test.ts`, `cd server && go test ./internal/daemon ./pkg/agent ./cmd/multica`, `cd server && go build -o bin/server ./cmd/server && go build -o bin/migrate ./cmd/migrate && go build -o bin/multica ./cmd/multica`, `curl http://localhost:22201/health`, `curl http://127.0.0.1:19514/health`, and `curl http://localhost:22201/api/runtimes` using the local CLI token/workspace headers.
 
 # DEP-P1-028 Docker 2200X 重部署与登录恢复
 

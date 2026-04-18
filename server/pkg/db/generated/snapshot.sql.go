@@ -11,6 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countDecisionContextSnapshots = `-- name: CountDecisionContextSnapshots :one
+SELECT COUNT(*) FROM decision_context_snapshot
+WHERE workspace_id = $1
+  AND ($2::uuid IS NULL OR decision_case_id = $2)
+  AND ($3::text IS NULL OR source = $3)
+`
+
+type CountDecisionContextSnapshotsParams struct {
+	WorkspaceID    pgtype.UUID `json:"workspace_id"`
+	DecisionCaseID pgtype.UUID `json:"decision_case_id"`
+	Source         pgtype.Text `json:"source"`
+}
+
+func (q *Queries) CountDecisionContextSnapshots(ctx context.Context, arg CountDecisionContextSnapshotsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDecisionContextSnapshots, arg.WorkspaceID, arg.DecisionCaseID, arg.Source)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createDecisionContextSnapshot = `-- name: CreateDecisionContextSnapshot :one
 INSERT INTO decision_context_snapshot (
     decision_case_id,
@@ -59,26 +79,6 @@ func (q *Queries) CreateDecisionContextSnapshot(ctx context.Context, arg CreateD
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const countDecisionContextSnapshots = `-- name: CountDecisionContextSnapshots :one
-SELECT COUNT(*) FROM decision_context_snapshot
-WHERE workspace_id = $1
-  AND ($2::uuid IS NULL OR decision_case_id = $2)
-  AND ($3::text IS NULL OR source = $3)
-`
-
-type CountDecisionContextSnapshotsParams struct {
-	WorkspaceID    pgtype.UUID `json:"workspace_id"`
-	DecisionCaseID pgtype.UUID `json:"decision_case_id"`
-	Source         pgtype.Text `json:"source"`
-}
-
-func (q *Queries) CountDecisionContextSnapshots(ctx context.Context, arg CountDecisionContextSnapshotsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countDecisionContextSnapshots, arg.WorkspaceID, arg.DecisionCaseID, arg.Source)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const deleteDecisionContextSnapshot = `-- name: DeleteDecisionContextSnapshot :exec

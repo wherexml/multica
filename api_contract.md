@@ -165,6 +165,98 @@
 }
 ```
 
+## Source
+```json
+{
+  "id": "source_uuid",
+  "workspace_id": "workspace_uuid",
+  "runtime_id": "runtime_uuid",
+  "name": "Linear MCP",
+  "source_type": "mcp",
+  "connection_status": "connected",
+  "connection_error": "",
+  "last_test_message": "连接测试通过，MCP 会话已成功建立",
+  "last_tested_at": "2026-04-14T10:00:00Z",
+  "mcp": {
+    "transport": "http",
+    "url": "https://mcp.linear.app",
+    "auth_type": "oauth",
+    "client_id": "client-id"
+  },
+  "auth_state": {
+    "auth_type": "oauth",
+    "configured": true,
+    "preview": "Bearer ••••abcd",
+    "updated_at": "2026-04-14T09:59:00Z"
+  },
+  "tool_summary": {
+    "total": 3,
+    "read_only": 2,
+    "write": 1,
+    "unknown": 0,
+    "last_seen_at": "2026-04-14T10:01:00Z"
+  },
+  "latest_run": {
+    "id": "source_run_uuid",
+    "run_type": "discover_tools",
+    "status": "completed",
+    "tool_name": "",
+    "summary": "已发现 3 个工具"
+  },
+  "created_at": "2026-04-14T09:58:00Z",
+  "updated_at": "2026-04-14T10:01:00Z"
+}
+```
+
+## SourceTool
+```json
+{
+  "id": "tool_uuid",
+  "source_id": "source_uuid",
+  "workspace_id": "workspace_uuid",
+  "name": "list_issues",
+  "title": "列出任务",
+  "description": "Read-only tool for listing issues",
+  "safety": "read_only",
+  "input_schema": {},
+  "annotations": {
+    "readOnlyHint": true
+  },
+  "last_seen_at": "2026-04-14T10:01:00Z",
+  "created_at": "2026-04-14T10:01:00Z",
+  "updated_at": "2026-04-14T10:01:00Z"
+}
+```
+
+## SourceRun
+```json
+{
+  "id": "source_run_uuid",
+  "source_id": "source_uuid",
+  "workspace_id": "workspace_uuid",
+  "runtime_id": "runtime_uuid",
+  "run_type": "call_tool",
+  "status": "completed",
+  "tool_name": "list_issues",
+  "request_payload": {
+    "arguments": {}
+  },
+  "result_payload": {
+    "connection_status": "connected",
+    "message": "工具调用成功",
+    "tool_result": {
+      "is_error": false
+    }
+  },
+  "summary": "工具调用成功",
+  "error_message": "",
+  "started_at": "2026-04-14T10:02:00Z",
+  "completed_at": "2026-04-14T10:02:01Z",
+  "created_at": "2026-04-14T10:02:00Z",
+  "updated_at": "2026-04-14T10:02:01Z"
+}
+```
+
 ---
 
 ## 决策单接口

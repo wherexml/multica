@@ -64,8 +64,8 @@ make setup     # DB + migrations + dependencies
 make start     # Start backend + frontend concurrently
 
 # Or start individually
-make dev       # Go backend (port 8080)
-pnpm dev:web   # Next.js frontend (port 3000)
+make dev       # Go backend (port 22201)
+pnpm dev:web   # Next.js frontend (port 22202)
 ```
 
 Common commands:

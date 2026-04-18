@@ -6,7 +6,7 @@ set -e
 
 # Database connection parameters
 DB_HOST="${POSTGRES_HOST:-localhost}"
-DB_PORT="${POSTGRES_PORT:-5432}"
+DB_PORT="${POSTGRES_PORT:-22200}"
 DB_NAME="${POSTGRES_DB:-multica}"
 DB_USER="${POSTGRES_USER:-multica}"
 DB_PASSWORD="${POSTGRES_PASSWORD:-multica}"

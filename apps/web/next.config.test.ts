@@ -13,13 +13,13 @@ describe("resolveRemoteApiUrl", () => {
     ).toBe("http://backend:8080");
   });
 
-  it("uses localhost:8080 in development without reusing the frontend port", () => {
+  it("uses localhost:22201 in development without reusing the frontend port", () => {
     expect(
       resolveRemoteApiUrl({
         NODE_ENV: "development",
-        PORT: "3000",
+        PORT: "22202",
       }),
-    ).toBe("http://localhost:8080");
+    ).toBe("http://localhost:22201");
   });
 
   it("defaults to the backend service hostname in production", () => {

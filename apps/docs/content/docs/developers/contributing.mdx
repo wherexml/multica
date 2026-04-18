@@ -9,7 +9,7 @@ Local development uses one shared PostgreSQL container and one database per chec
 
 - The main checkout usually uses `.env` and `POSTGRES_DB=multica`
 - Each Git worktree uses its own `.env.worktree`
-- Every checkout connects to the same PostgreSQL host: `localhost:5432`
+- Every checkout connects to the same PostgreSQL host: `localhost:22200`
 - Isolation happens at the database level, not by starting a separate Docker Compose project
 - Backend and frontend ports are still unique per worktree
 

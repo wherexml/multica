@@ -101,6 +101,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.workspaceSyncLoop(ctx)
 
 	go d.heartbeatLoop(ctx)
+	go d.sourcePollLoop(ctx)
 	go d.usageScanLoop(ctx)
 	go d.serveHealth(ctx, healthLn, time.Now())
 	return d.pollLoop(ctx)
@@ -822,6 +823,23 @@ func (d *Daemon) handleTask(ctx context.Context, task Task) {
 	}()
 
 	result, err := d.runTask(runCtx, task, provider, taskLog)
+	attempt := 1
+	for err == nil && shouldRetryTransientProviderFailure(provider, result) && attempt < 3 {
+		delay := transientProviderRetryDelay(attempt)
+		taskLog.Warn("transient provider failure, retrying",
+			"provider", provider,
+			"attempt", attempt,
+			"next_attempt", attempt+1,
+			"delay", delay.String(),
+			"error", result.Comment,
+		)
+		if err := sleepWithContext(runCtx, delay); err != nil {
+			taskLog.Info("retry interrupted before next attempt")
+			return
+		}
+		attempt++
+		result, err = d.runTask(runCtx, task, provider, taskLog)
+	}
 
 	// Check if we were cancelled by the polling goroutine.
 	select {
@@ -1152,15 +1170,62 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 			SessionID: result.SessionID,
 			WorkDir:   env.WorkDir,
 			Usage:     usageEntries,
+			ToolCount: toolCount.Load(),
 		}, nil
 	case "timeout":
-		return TaskResult{}, fmt.Errorf("%s timed out after %s", provider, d.cfg.AgentTimeout)
+		return TaskResult{ToolCount: toolCount.Load()}, fmt.Errorf("%s timed out after %s", provider, d.cfg.AgentTimeout)
 	default:
 		errMsg := result.Error
 		if errMsg == "" {
 			errMsg = fmt.Sprintf("%s execution %s", provider, result.Status)
 		}
-		return TaskResult{Status: "blocked", Comment: errMsg, Usage: usageEntries}, nil
+		return TaskResult{
+			Status:    "blocked",
+			Comment:   errMsg,
+			Usage:     usageEntries,
+			ToolCount: toolCount.Load(),
+		}, nil
+	}
+}
+
+func shouldRetryTransientProviderFailure(provider string, result TaskResult) bool {
+	if provider != "claude" || result.Status != "blocked" || result.ToolCount != 0 {
+		return false
+	}
+
+	msg := strings.ToLower(strings.TrimSpace(result.Comment))
+	if msg == "" {
+		return false
+	}
+	if strings.Contains(msg, "status.claude.com") {
+		return true
+	}
+
+	transientSignals := []string{
+		"502",
+		"503",
+		"504",
+		"bad gateway",
+		"gateway timeout",
+		"service unavailable",
+	}
+	for _, signal := range transientSignals {
+		if strings.Contains(msg, signal) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func transientProviderRetryDelay(attempt int) time.Duration {
+	switch attempt {
+	case 1:
+		return 2 * time.Second
+	case 2:
+		return 5 * time.Second
+	default:
+		return 8 * time.Second
 	}
 }
 

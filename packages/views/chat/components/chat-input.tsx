@@ -53,7 +53,7 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
             handleInput();
           }}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "This session is archived" : "Ask Multica..."}
+          placeholder={disabled ? "当前会话已归档" : "请输入你的问题..."}
           disabled={isRunning || disabled}
           className="block w-full resize-none bg-transparent px-3 pt-3 pb-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
           rows={1}

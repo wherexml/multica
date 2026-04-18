@@ -12,6 +12,7 @@ import {
   FolderKanban,
   Bot,
   Monitor,
+  DatabaseZap,
   BookOpenText,
   Settings,
   type LucideIcon,
@@ -135,6 +136,12 @@ export function SearchCommand() {
         label: t("runtime", locale),
         icon: Monitor,
         keywords: isZh ? ["执行环境", "运行时"] : ["runtimes", "environments"],
+      },
+      {
+        href: "/sources",
+        label: t("source", locale),
+        icon: DatabaseZap,
+        keywords: isZh ? ["数据源", "MCP", "连接数据"] : ["sources", "mcp", "data source"],
       },
       {
         href: "/skills",

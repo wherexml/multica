@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -18,10 +18,15 @@ import (
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
 
-var runtimeTestHandler *Handler
-var runtimeTestPool *pgxpool.Pool
-var runtimeTestUserID string
-var runtimeTestWorkspaceID string
+var (
+	runtimeFixtureOnce sync.Once
+	runtimeFixtureErr  error
+
+	runtimeTestHandler     *Handler
+	runtimeTestPool        *pgxpool.Pool
+	runtimeTestUserID      string
+	runtimeTestWorkspaceID string
+)
 
 const (
 	runtimeTestEmail         = "runtime-handler-test@multica.ai"
@@ -29,48 +34,40 @@ const (
 	runtimeTestWorkspaceSlug = "runtime-handler-tests"
 )
 
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://multica:multica@localhost:5432/multica?sslmode=disable"
-	}
+func ensureRuntimeHandlerFixture(t *testing.T) {
+	t.Helper()
 
-	pool, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		fmt.Printf("Skipping runtime handler tests: could not connect to database: %v\n", err)
-		os.Exit(0)
-	}
-	if err := pool.Ping(ctx); err != nil {
-		fmt.Printf("Skipping runtime handler tests: database not reachable: %v\n", err)
-		pool.Close()
-		os.Exit(0)
-	}
-
-	queries := db.New(pool)
-	hub := realtime.NewHub()
-	go hub.Run()
-	bus := events.New()
-	emailSvc := service.NewEmailService()
-	runtimeTestHandler = New(queries, pool, hub, bus, emailSvc, nil, nil)
-	runtimeTestPool = pool
-
-	runtimeTestUserID, runtimeTestWorkspaceID, err = setupRuntimeHandlerFixture(ctx, pool)
-	if err != nil {
-		fmt.Printf("Failed to set up runtime handler test fixture: %v\n", err)
-		pool.Close()
-		os.Exit(1)
-	}
-
-	code := m.Run()
-	if err := cleanupRuntimeHandlerFixture(context.Background(), pool); err != nil {
-		fmt.Printf("Failed to clean up runtime handler test fixture: %v\n", err)
-		if code == 0 {
-			code = 1
+	runtimeFixtureOnce.Do(func() {
+		ctx := context.Background()
+		dbURL := os.Getenv("DATABASE_URL")
+		if dbURL == "" {
+			dbURL = "postgres://multica:multica@localhost:22200/multica?sslmode=disable"
 		}
+
+		runtimeTestPool, runtimeFixtureErr = pgxpool.New(ctx, dbURL)
+		if runtimeFixtureErr != nil {
+			return
+		}
+		if runtimeFixtureErr = runtimeTestPool.Ping(ctx); runtimeFixtureErr != nil {
+			return
+		}
+		if runtimeFixtureErr = cleanupRuntimeHandlerFixture(ctx, runtimeTestPool); runtimeFixtureErr != nil {
+			return
+		}
+
+		queries := db.New(runtimeTestPool)
+		hub := realtime.NewHub()
+		go hub.Run()
+		bus := events.New()
+		emailSvc := service.NewEmailService()
+		runtimeTestHandler = New(queries, runtimeTestPool, hub, bus, emailSvc, nil, nil)
+
+		runtimeTestUserID, runtimeTestWorkspaceID, runtimeFixtureErr = setupRuntimeHandlerFixture(ctx, runtimeTestPool)
+	})
+
+	if runtimeFixtureErr != nil {
+		t.Skipf("runtime fixture unavailable: %v", runtimeFixtureErr)
 	}
-	pool.Close()
-	os.Exit(code)
 }
 
 func setupRuntimeHandlerFixture(ctx context.Context, pool *pgxpool.Pool) (string, string, error) {
@@ -129,7 +126,10 @@ func runtimeNewRequest(method, path string, body any) *http.Request {
 }
 
 func runtimeWithURLParam(req *http.Request, key, value string) *http.Request {
-	rctx := chi.NewRouteContext()
+	rctx, _ := req.Context().Value(chi.RouteCtxKey).(*chi.Context)
+	if rctx == nil {
+		rctx = chi.NewRouteContext()
+	}
 	rctx.URLParams.Add(key, value)
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 }

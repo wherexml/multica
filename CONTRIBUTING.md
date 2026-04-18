@@ -17,7 +17,7 @@ Local development uses one shared PostgreSQL container and one database per chec
 
 - the main checkout usually uses `.env` and `POSTGRES_DB=multica`
 - each Git worktree uses its own `.env.worktree`
-- every checkout connects to the same PostgreSQL host: `localhost:5432`
+- every checkout connects to the same PostgreSQL host: `localhost:22200`
 - isolation happens at the database level, not by starting a separate Docker Compose project
 - backend and frontend ports are still unique per worktree
 
@@ -55,10 +55,10 @@ By default, `.env` points to:
 
 ```bash
 POSTGRES_DB=multica
-POSTGRES_PORT=5432
-DATABASE_URL=postgres://multica:multica@localhost:5432/multica?sslmode=disable
-PORT=8080
-FRONTEND_PORT=3000
+POSTGRES_PORT=22200
+DATABASE_URL=postgres://multica:multica@localhost:22200/multica?sslmode=disable
+PORT=22201
+FRONTEND_PORT=22202
 ```
 
 ### Worktree
@@ -73,16 +73,16 @@ That generates values like:
 
 ```bash
 POSTGRES_DB=multica_my_feature_702
-POSTGRES_PORT=5432
+POSTGRES_PORT=22200
 PORT=18782
 FRONTEND_PORT=13702
-DATABASE_URL=postgres://multica:multica@localhost:5432/multica_my_feature_702?sslmode=disable
+DATABASE_URL=postgres://multica:multica@localhost:22200/multica_my_feature_702?sslmode=disable
 ```
 
 Notes:
 
 - `POSTGRES_DB` is unique per worktree
-- `POSTGRES_PORT` stays fixed at `5432`
+- `POSTGRES_PORT` stays fixed at `22200`
 - backend and frontend ports are derived from the worktree path hash
 - `make worktree-env` refuses to overwrite an existing `.env.worktree`
 

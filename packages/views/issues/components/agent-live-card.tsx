@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@multica/ui
 import { useActorName } from "@multica/core/workspace/hooks";
 import { redactSecrets } from "../utils/redact";
 import { AgentTranscriptDialog } from "./agent-transcript-dialog";
+import { getLiveTaskEmptyStateMessage, getTaskRunEmptyStateMessage } from "./agent-live-card-copy";
 
 // ─── Shared types & helpers ─────────────────────────────────────────────────
 
@@ -428,9 +429,7 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
           ) : (
             <div className="border-t border-info/10 px-3 py-3">
               <p className="text-xs text-muted-foreground">
-                {isZh
-                  ? "当前数字员工暂不支持实时日志，任务完成后会显示结果。"
-                  : "Live log is not available for this agent provider. Results will appear when the task completes."}
+                {getLiveTaskEmptyStateMessage(locale)}
               </p>
             </div>
           )}
@@ -599,7 +598,7 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
               {isZh ? "加载中..." : "Loading..."}
             </div>
           ) : items.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">{isZh ? "暂无执行记录。" : "No execution data recorded."}</p>
+            <p className="text-xs text-muted-foreground py-2">{getTaskRunEmptyStateMessage(task, locale)}</p>
           ) : (
             items.map((item, idx) => (
               <TimelineRow key={`${item.seq}-${idx}`} item={item} />

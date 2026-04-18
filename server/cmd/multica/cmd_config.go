@@ -37,8 +37,8 @@ var configLocalCmd = &cobra.Command{
 }
 
 func init() {
-	configLocalCmd.Flags().Int("port", 8080, "Backend server port")
-	configLocalCmd.Flags().Int("frontend-port", 3000, "Frontend port")
+	configLocalCmd.Flags().Int("port", 22201, "Backend server port")
+	configLocalCmd.Flags().Int("frontend-port", 22202, "Frontend port")
 
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configSetCmd)

@@ -186,8 +186,8 @@ Or configure manually:
 multica config local
 
 # Or set URLs individually:
-# multica config set app_url http://localhost:3000
-# multica config set server_url http://localhost:8080
+# multica config set app_url http://localhost:22202
+# multica config set server_url http://localhost:22201
 
 # For production with TLS:
 # multica config set app_url https://app.example.com

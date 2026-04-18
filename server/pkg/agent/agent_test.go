@@ -27,6 +27,17 @@ func TestNewReturnsCodexBackend(t *testing.T) {
 	}
 }
 
+func TestNewReturnsGeminiBackend(t *testing.T) {
+	t.Parallel()
+	b, err := New("gemini", Config{ExecutablePath: "/nonexistent/gemini"})
+	if err != nil {
+		t.Fatalf("New(gemini) error: %v", err)
+	}
+	if _, ok := b.(*geminiBackend); !ok {
+		t.Fatalf("expected *geminiBackend, got %T", b)
+	}
+}
+
 func TestNewRejectsUnknownType(t *testing.T) {
 	t.Parallel()
 	_, err := New("gpt", Config{})

@@ -120,24 +120,6 @@ func (q *Queries) ArchiveInboxItem(ctx context.Context, id pgtype.UUID) (InboxIt
 	return i, err
 }
 
-const countUnreadInbox = `-- name: CountUnreadInbox :one
-SELECT count(*) FROM inbox_item
-WHERE workspace_id = $1 AND recipient_type = $2 AND recipient_id = $3 AND read = false AND archived = false
-`
-
-type CountUnreadInboxParams struct {
-	WorkspaceID   pgtype.UUID `json:"workspace_id"`
-	RecipientType string      `json:"recipient_type"`
-	RecipientID   pgtype.UUID `json:"recipient_id"`
-}
-
-func (q *Queries) CountUnreadInbox(ctx context.Context, arg CountUnreadInboxParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUnreadInbox, arg.WorkspaceID, arg.RecipientType, arg.RecipientID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countTowerAlerts = `-- name: CountTowerAlerts :one
 SELECT COUNT(*)
 FROM inbox_item i
@@ -172,7 +154,30 @@ type CountTowerAlertsParams struct {
 }
 
 func (q *Queries) CountTowerAlerts(ctx context.Context, arg CountTowerAlertsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countTowerAlerts, arg.WorkspaceID, arg.Severity, arg.Domain, arg.RiskLevel)
+	row := q.db.QueryRow(ctx, countTowerAlerts,
+		arg.WorkspaceID,
+		arg.Severity,
+		arg.Domain,
+		arg.RiskLevel,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUnreadInbox = `-- name: CountUnreadInbox :one
+SELECT count(*) FROM inbox_item
+WHERE workspace_id = $1 AND recipient_type = $2 AND recipient_id = $3 AND read = false AND archived = false
+`
+
+type CountUnreadInboxParams struct {
+	WorkspaceID   pgtype.UUID `json:"workspace_id"`
+	RecipientType string      `json:"recipient_type"`
+	RecipientID   pgtype.UUID `json:"recipient_id"`
+}
+
+func (q *Queries) CountUnreadInbox(ctx context.Context, arg CountUnreadInboxParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadInbox, arg.WorkspaceID, arg.RecipientType, arg.RecipientID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -378,7 +383,7 @@ SELECT
     i.issue_id,
     iss.status AS issue_status,
     i.created_at,
-    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') AS domain,
+    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '')::text AS domain,
     COALESCE(
         NULLIF(i.details->>'risk_level', ''),
         NULLIF(dc.risk_level, ''),
@@ -387,7 +392,7 @@ SELECT
             WHEN i.severity = 'attention' THEN 'medium'
             ELSE 'low'
         END
-    ) AS risk_level
+    )::text AS risk_level
 FROM inbox_item i
 LEFT JOIN issue iss ON iss.id = i.issue_id
 LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id
@@ -412,7 +417,7 @@ WHERE i.workspace_id = $1
       ) = $4
   )
 ORDER BY i.created_at DESC
-LIMIT $5 OFFSET $6
+LIMIT $6 OFFSET $5
 `
 
 type ListTowerAlertsParams struct {
@@ -420,8 +425,8 @@ type ListTowerAlertsParams struct {
 	Severity    pgtype.Text `json:"severity"`
 	Domain      pgtype.Text `json:"domain"`
 	RiskLevel   pgtype.Text `json:"risk_level"`
-	LimitCount  int32       `json:"limit_count"`
 	OffsetCount int32       `json:"offset_count"`
+	LimitCount  int32       `json:"limit_count"`
 }
 
 type ListTowerAlertsRow struct {
@@ -443,8 +448,8 @@ func (q *Queries) ListTowerAlerts(ctx context.Context, arg ListTowerAlertsParams
 		arg.Severity,
 		arg.Domain,
 		arg.RiskLevel,
-		arg.LimitCount,
 		arg.OffsetCount,
+		arg.LimitCount,
 	)
 	if err != nil {
 		return nil, err

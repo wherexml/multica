@@ -50,3 +50,25 @@ export type { ChatSession, ChatMessage, SendChatMessageResponse } from "./chat";
 export type { StorageAdapter } from "./storage";
 export type { Project, ProjectStatus, ProjectPriority, CreateProjectRequest, UpdateProjectRequest, ListProjectsResponse } from "./project";
 export type { PinnedItem, PinnedItemType, CreatePinRequest, ReorderPinsRequest } from "./pin";
+export type {
+  Source,
+  SourceType,
+  SourceConnectionStatus,
+  SourceToolSafety,
+  SourceRunType,
+  SourceRunStatus,
+  McpTransport,
+  McpAuthType,
+  McpSourceConfig,
+  SourceAuthState,
+  SourceToolSummary,
+  SourceTool,
+  SourceRun,
+  CreateSourceRequest,
+  UpdateSourceRequest,
+  UpdateSourceAuthRequest,
+  SourceToolCallRequest,
+  ListSourcesResponse,
+  ListSourceToolsResponse,
+  TestSourceResponse,
+} from "./source";

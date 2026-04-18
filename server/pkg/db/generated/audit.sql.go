@@ -160,7 +160,7 @@ WHERE workspace_id = $1
   AND ($5::uuid IS NULL OR actor_id = $5)
   AND ($6::text IS NULL OR target_type = $6)
 ORDER BY created_at DESC
-LIMIT $7 OFFSET $8
+LIMIT $8 OFFSET $7
 `
 
 type ListAuditEventsParams struct {
@@ -170,8 +170,8 @@ type ListAuditEventsParams struct {
 	ActorType      pgtype.Text `json:"actor_type"`
 	ActorID        pgtype.UUID `json:"actor_id"`
 	TargetType     pgtype.Text `json:"target_type"`
-	LimitCount     int32       `json:"limit_count"`
 	OffsetCount    int32       `json:"offset_count"`
+	LimitCount     int32       `json:"limit_count"`
 }
 
 func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]AuditEvent, error) {
@@ -182,8 +182,8 @@ func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams
 		arg.ActorType,
 		arg.ActorID,
 		arg.TargetType,
-		arg.LimitCount,
 		arg.OffsetCount,
+		arg.LimitCount,
 	)
 	if err != nil {
 		return nil, err

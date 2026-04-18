@@ -27,6 +27,7 @@
     "./agents": "./agents/index.ts",
     "./inbox": "./inbox/index.ts",
     "./runtimes": "./runtimes/index.ts",
+    "./sources": "./sources/index.ts",
     "./workspace/workspace-avatar": "./workspace/workspace-avatar.tsx",
     "./layout": "./layout/index.ts",
     "./auth": "./auth/index.ts",

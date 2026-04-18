@@ -13,7 +13,7 @@ export function resolveRemoteApiUrl(env: NodeJS.ProcessEnv = process.env): strin
   }
 
   if (env.NODE_ENV === "development") {
-    return `http://localhost:${env.BACKEND_PORT || "8080"}`;
+    return `http://localhost:${env.BACKEND_PORT || "22201"}`;
   }
 
   return "http://backend:8080";

@@ -126,7 +126,7 @@ function LoginPageContent() {
       hydrateWorkspace(wsList, lastWorkspaceId);
       router.push(searchParams.get("next") || "/issues");
     } catch (err) {
-      setError(localizeAuthError(err, "邮箱或密码不正确"));
+      setError(localizeAuthError(err, "登录失败，请稍后重试"));
       setSubmitting(false);
     }
   };

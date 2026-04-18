@@ -77,4 +77,5 @@ type TaskResult struct {
 	SessionID  string           `json:"session_id,omitempty"` // Claude session ID for future resumption
 	WorkDir    string           `json:"work_dir,omitempty"`   // working directory used during execution
 	Usage      []TaskUsageEntry `json:"usage,omitempty"`      // per-model token usage
+	ToolCount  int32            `json:"tool_count,omitempty"` // tool calls observed before completion/failure
 }

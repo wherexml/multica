@@ -24,8 +24,8 @@ Use --local to skip auto-detection and force local mode.`,
 
 func init() {
 	setupCmd.Flags().Bool("local", false, "Force local mode (skip server auto-detection)")
-	setupCmd.Flags().Int("port", 8080, "Backend server port (for local mode)")
-	setupCmd.Flags().Int("frontend-port", 3000, "Frontend port (for local mode)")
+	setupCmd.Flags().Int("port", 22201, "Backend server port (for local mode)")
+	setupCmd.Flags().Int("frontend-port", 22202, "Frontend port (for local mode)")
 }
 
 func runSetup(cmd *cobra.Command, args []string) error {

@@ -9,12 +9,12 @@ import (
 func TestNormalizeServerBaseURL(t *testing.T) {
 	t.Parallel()
 
-	got, err := NormalizeServerBaseURL("ws://localhost:8080/ws")
+	got, err := NormalizeServerBaseURL("ws://localhost:22201/ws")
 	if err != nil {
 		t.Fatalf("NormalizeServerBaseURL returned error: %v", err)
 	}
-	if got != "http://localhost:8080" {
-		t.Fatalf("expected http://localhost:8080, got %s", got)
+	if got != "http://localhost:22201" {
+		t.Fatalf("expected http://localhost:22201, got %s", got)
 	}
 }
 
@@ -81,5 +81,61 @@ func TestIsWorkspaceNotFoundError(t *testing.T) {
 
 	if isWorkspaceNotFoundError(&requestError{StatusCode: http.StatusInternalServerError, Body: `{"error":"workspace not found"}`}) {
 		t.Fatal("did not expect 500 to be treated as workspace not found")
+	}
+}
+
+func TestShouldRetryTransientProviderFailure(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		result TaskResult
+		want   bool
+	}{
+		{
+			name: "retries claude gateway failures before any tools run",
+			result: TaskResult{
+				Status:    "blocked",
+				Comment:   "API Error: tothemars.top | 502: Bad gateway · check status.claude.com",
+				ToolCount: 0,
+			},
+			want: true,
+		},
+		{
+			name: "does not retry after tools already ran",
+			result: TaskResult{
+				Status:    "blocked",
+				Comment:   "API Error: tothemars.top | 502: Bad gateway · check status.claude.com",
+				ToolCount: 1,
+			},
+			want: false,
+		},
+		{
+			name: "does not retry non transient failures",
+			result: TaskResult{
+				Status:    "blocked",
+				Comment:   "permission denied",
+				ToolCount: 0,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := shouldRetryTransientProviderFailure("claude", tt.result)
+			if got != tt.want {
+				t.Fatalf("shouldRetryTransientProviderFailure() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	if shouldRetryTransientProviderFailure("codex", TaskResult{
+		Status:    "blocked",
+		Comment:   "502 bad gateway",
+		ToolCount: 0,
+	}) {
+		t.Fatal("did not expect non-claude providers to use claude retry logic")
 	}
 }

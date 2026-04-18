@@ -15,6 +15,10 @@ export const statusConfig: Record<AgentStatus, { label: string; color: string; d
   offline: { label: "Offline", color: "text-muted-foreground/50", dot: "bg-muted-foreground/40" },
 };
 
+export function getAgentPresenceConfig(status: AgentStatus): { color: string; dot: string } {
+  return status === "offline" ? statusConfig.offline : statusConfig.working;
+}
+
 export const taskStatusConfig: Record<string, { label: string; icon: typeof CheckCircle2; color: string }> = {
   queued: { label: "Queued", icon: Clock, color: "text-muted-foreground" },
   dispatched: { label: "Dispatched", icon: Play, color: "text-info" },

@@ -36,7 +36,7 @@ Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapsh
 ## 团队成员映射
 
 | Git 用户名 | 中文名+英文名 |
-|------------|---------------|
+| --- | --- |
 | wherexml | 许茂林 (Steve) |
 | snowzh | SnowZh |
 | joevic9 | 刘容舟 (Joe) |
@@ -203,6 +203,7 @@ make check            # 全部：类型检查 + 单元测试 + Go 测试 + E2E
 | 加/改 API | api_contract.md |
 | 部署相关 | deployment.md → DEPLOY_CONTAINER.md |
 | CLI/Daemon 问题 | CLI_AND_DAEMON.md |
+| 查看本地功能增量（含 Sources / MCP） | local_modify.md |
 | 上游同步 | local_modify.md |
 
 ---
@@ -214,17 +215,19 @@ make check            # 全部：类型检查 + 单元测试 + Go 测试 + E2E
 | 服务 | 容器端口 | 宿主机端口 | 访问地址 |
 | --- | --- | --- | --- |
 | 前端 (Next.js) | 3000 | **22202** | http://localhost:22202 |
-| 后端 (Go) | 8080 | **8080** | http://localhost:8080 |
+| 后端 (Go) | 8080 | **22201** | http://localhost:22201 |
 | PostgreSQL | 5432 | **22200** | postgres://localhost:22200 |
 
 **Docker 容器名称：**
+
 - `multica-frontend-1` — 前端
 - `multica-backend-1` — 后端
 - `multica-postgres-1` — 数据库
 
-**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:8080` 直接访问后端。
+**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:22201` 直接访问后端。
 
 **本地部署测试账号：**
+
 - Email: `admin@local`
 - Password: `admin123`
 
@@ -241,6 +244,7 @@ Node 22 + Go 1.26.1，`pgvector/pgvector:pg17` PostgreSQL。详见 `.github/work
 共享 PostgreSQL 容器，DB 层面隔离。`make worktree-env` → `make setup-worktree` → `make start-worktree`
 
 ## 同步上游仓库
+
 ```bash
 git remote add upstream https://github.com/multica-ai/multica  # 一次性
 git fetch upstream main && git stash && git merge upstream/main && git stash pop
@@ -248,16 +252,11 @@ git fetch upstream main && git stash && git merge upstream/main && git stash pop
 ```
 
 ## 本地修改记录
-> 详见 [local_modify.md](./local_modify.md)
-核心要点：
+
+> 详见 [local_modify.md](./local_modify.md)。核心要点：
+
 - 本地添加了**密码认证**（邮箱+密码登录/注册），上游用 Google OAuth + 验证码
 - 登录页 `apps/web/app/(auth)/login/page.tsx` 是本地完全重写，**不要恢复为上游版本**
 - 容器部署端口 222XX 范围，可能与上游不同
+- `Sources / MCP` 数据源层也是本地增量，细节请直接看 `local_modify.md`
 - 同步 `server/go.mod` 后需 `go get golang.org/x/crypto`
-
-### 本地部署
-本地通过 orb 的 docker 部署的
-[部署地址：http://localhost:22202](http://localhost:22202/inbox)
-admin@local
-admin123
-修改完了需要重新部署进行测试

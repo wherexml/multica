@@ -23,7 +23,7 @@
 | Go 源文件 | 132 个 |
 | TS/TSX 文件 | 247 个 |
 | SQL 迁移 | 62 个（001_init → 031_...） |
-| Agent 支持 | Claude Code / Codex / OpenCode |
+| Agent 支持 | Claude Code / Openclaw / Codex / Hermes / OpenCode / Gemini |
 | 数据库 | PostgreSQL 17 + pgvector |
 | 部署 | Docker Compose + GoReleaser |
 
@@ -282,19 +282,46 @@ Slow client 驱逐：60s 无响应的 client 主动断开。
 
 ### 4.8 Agent SDK (`pkg/agent/`)
 
-统一 `Backend` 接口，三种实现：
+统一 `Backend` 接口，六种实现：
 
-| Backend | 可执行文件 | 通信协议 | 消息类型 |
-|---------|-----------|----------|----------|
-| Claude Code | `claude` | `stream-json` 输出格式 | `text` / `thinking` / `tool_use` / `tool_result` |
-| Codex | `codex` | JSON-RPC 2.0 over stdio（`app-server` 模式） | 同上 |
-| OpenCode | `opencode` | `run --format json` 流式输出 | 同上 |
+| Backend | 可执行文件 | 调用方式 | 通信协议 | 权限控制 |
+|---------|-----------|----------|----------|----------|
+| Claude Code | `claude` | `claude -p --output-format stream-json --input-format stream-json --verbose --permission-mode bypassPermissions` | 双向 stream-json（stdin 写 prompt，stdout 读事件流） | `--permission-mode bypassPermissions` |
+| Openclaw | `openclaw` | `openclaw --message <prompt> --output-format stream-json --yes` | stream-json 输出（与 Claude 相同格式） | `--yes` 自动确认 |
+| Codex | `codex` | `codex app-server --listen stdio://` | ACP（Agent Communication Protocol）over stdio | 环境变量控制 |
+| Hermes | `hermes` | `hermes acp` | ACP over stdio | `HERMES_YOLO_MODE=1` |
+| OpenCode | `opencode` | `opencode <prompt>` | 直接命令行传 prompt，stdout 流式输出 | `OPENCODE_PERMISSION={"*":"allow"}` |
+| Gemini | `gemini` | — | — | — |
+
+**三种通信模式**：
+- **stream-json**（Claude / Openclaw）：stdin 写入 NDJSON user message，stdout 逐行输出 `assistant` / `user` / `system` / `result` 事件，支持增量解析
+- **ACP**（Codex / Hermes）：Agent Communication Protocol，stdio 双向 JSON-RPC 风格通信
+- **Direct CLI**（OpenCode）：直接命令行参数传 prompt，stdout 流式返回结果
+
+**消息上报能力**：
+
+所有 Backend 统一输出以下消息类型到 `Session.Messages` channel：
+
+| 消息类型 | 说明 | 上报到服务器 |
+|---------|------|-------------|
+| `text` | Agent 文本输出 | ✅ 批量上报（500ms 合并） |
+| `thinking` | 思考/推理过程 | ✅ 批量上报（500ms 合并） |
+| `tool_use` | 工具调用（tool 名 + 输入参数） | ✅ 即时上报 |
+| `tool_result` | 工具返回结果（截断 8192 字符） | ✅ 即时上报 |
+| `status` | 状态变更（如 session 启动） | ✅ |
+| `error` | 错误信息 | ✅ |
+| `log` | 日志 | ✅ |
+
+**Subagent / 斜杠命令的可见性**：
+- Daemon 以非交互模式（`-p` / ACP）调用 Agent CLI，**斜杠命令不适用**
+- 当 Claude Code 内部 spawn subagent 时，主流中只能看到外层 `tool_use`（tool=`Agent`）和 `tool_result`，**subagent 内部的工具调用、思考过程不可见**——Claude Code 的 stream-json 不输出嵌套事件
+- Session resumption 支持：Claude 通过 `--resume <session_id>` 恢复先前会话
 
 `Session` 对象管理一次任务执行的生命周期：
 1. 解析/加载 agent 技能文件
 2. 构造 prompt（含 system prompt、issue 描述、技能内容）
 3. 启动子进程，捕获 stdout
-4. 流式解析输出，通过 channel 返回 `text` / `thinking` / `tool_use` / `tool_result`
+4. 流式解析输出，通过 channel 返回消息
 5. 任务结束时写入 `Session.Result` channel
 
 **任务消息持久化**：每条消息（带 `seq` 序列号）存入 `task_message` 表，daemon 通过 `ReportTaskMessages` 批量上报。
@@ -620,7 +647,7 @@ multica daemon status
 | **前后端分离** | Go 后端完全独立，前端 Next.js 纯 SPA，API rewrite 解决跨域 | 解耦部署、独立迭代 |
 | **DB 查询** | sqlc 手写 SQL 生成类型安全代码，不用 ORM | SQL 精确可控，类型安全有保障 |
 | **实时通信** | 服务端 WebSocket Hub + 房间模型 + 客户端 WSClient 自动重连 | 低延迟、支持多 workspace 并发 |
-| **Agent 协议** | 统一 Backend 接口，支持 Claude/Codex/OpenCode 三种 CLI | 用户可选，不绑定供应商 |
+| **Agent 协议** | 统一 Backend 接口，6 种 CLI（stream-json / ACP / Direct 三种通信模式） | 用户可选，不绑定供应商 |
 | **事件处理** | 同步内存 pub/sub（EventBus），监听器在主流程中执行 | 简单可靠，无额外基础设施依赖 |
 | **状态同步** | WS 事件驱动精确更新（add/update/remove），非全量拉取 | 性能最优，用户体验好 |
 | **多态模型** | `type + id` 模式支持 Agent/Member 角色互换 | 灵活扩展，不改 schema |

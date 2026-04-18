@@ -19,8 +19,8 @@ This installs everything: clones the repo, starts Docker services, and installs 
 Wait for the output `✓ Multica is installed and running!` before proceeding.
 
 **Expected result:**
-- Frontend at http://localhost:3000
-- Backend at http://localhost:8080
+- Frontend at http://localhost:22202
+- Backend at http://localhost:22201
 - `multica` CLI installed and configured for localhost
 
 ## Alternative: Manual Setup
@@ -34,7 +34,7 @@ multica setup --local
 ```
 
 The `multica setup --local` command will:
-1. Configure CLI to connect to localhost:8080 / localhost:3000
+1. Configure CLI to connect to localhost:22201 / localhost:22202
 2. Open a browser for login — use verification code `888888` with any email
 3. Discover workspaces automatically
 4. Start the daemon in the background
@@ -71,4 +71,4 @@ If the default ports (8080/3000) are in use:
 - **Backend not ready:** `docker compose -f docker-compose.selfhost.yml logs backend`
 - **Frontend not ready:** `docker compose -f docker-compose.selfhost.yml logs frontend`
 - **Daemon issues:** `multica daemon logs`
-- **Health check:** `curl http://localhost:8080/health`
+- **Health check:** `curl http://localhost:22201/health`

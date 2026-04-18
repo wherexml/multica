@@ -27,23 +27,6 @@ type ActionRun struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
-type AuditEvent struct {
-	ID             pgtype.UUID        `json:"id"`
-	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
-	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
-	ActorType      string             `json:"actor_type"`
-	ActorID        pgtype.UUID        `json:"actor_id"`
-	Action         string             `json:"action"`
-	TargetType     string             `json:"target_type"`
-	TargetID       pgtype.UUID        `json:"target_id"`
-	OldState       []byte             `json:"old_state"`
-	NewState       []byte             `json:"new_state"`
-	Metadata       []byte             `json:"metadata"`
-	IpAddress      string             `json:"ip_address"`
-	UserAgent      string             `json:"user_agent"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-}
-
 type ActivityLog struct {
 	ID          pgtype.UUID        `json:"id"`
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
@@ -130,6 +113,23 @@ type Attachment struct {
 	ContentType  string             `json:"content_type"`
 	SizeBytes    int64              `json:"size_bytes"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type AuditEvent struct {
+	ID             pgtype.UUID        `json:"id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	DecisionCaseID pgtype.UUID        `json:"decision_case_id"`
+	ActorType      string             `json:"actor_type"`
+	ActorID        pgtype.UUID        `json:"actor_id"`
+	Action         string             `json:"action"`
+	TargetType     string             `json:"target_type"`
+	TargetID       pgtype.UUID        `json:"target_id"`
+	OldState       []byte             `json:"old_state"`
+	NewState       []byte             `json:"new_state"`
+	Metadata       []byte             `json:"metadata"`
+	IpAddress      string             `json:"ip_address"`
+	UserAgent      string             `json:"user_agent"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type ChatMessage struct {
@@ -464,6 +464,65 @@ type SkillFile struct {
 	Content   string             `json:"content"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Source struct {
+	ID               pgtype.UUID        `json:"id"`
+	WorkspaceID      pgtype.UUID        `json:"workspace_id"`
+	RuntimeID        pgtype.UUID        `json:"runtime_id"`
+	Name             string             `json:"name"`
+	SourceType       string             `json:"source_type"`
+	Config           []byte             `json:"config"`
+	ConnectionStatus string             `json:"connection_status"`
+	ConnectionError  string             `json:"connection_error"`
+	LastTestMessage  string             `json:"last_test_message"`
+	LastTestedAt     pgtype.Timestamptz `json:"last_tested_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SourceRun struct {
+	ID             pgtype.UUID        `json:"id"`
+	SourceID       pgtype.UUID        `json:"source_id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	RuntimeID      pgtype.UUID        `json:"runtime_id"`
+	RunType        string             `json:"run_type"`
+	Status         string             `json:"status"`
+	ToolName       string             `json:"tool_name"`
+	RequestPayload []byte             `json:"request_payload"`
+	ResultPayload  []byte             `json:"result_payload"`
+	Summary        string             `json:"summary"`
+	ErrorMessage   string             `json:"error_message"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SourceSecret struct {
+	SourceID         pgtype.UUID        `json:"source_id"`
+	WorkspaceID      pgtype.UUID        `json:"workspace_id"`
+	AuthType         string             `json:"auth_type"`
+	SecretCiphertext []byte             `json:"secret_ciphertext"`
+	SecretNonce      []byte             `json:"secret_nonce"`
+	SecretPreview    string             `json:"secret_preview"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SourceTool struct {
+	ID          pgtype.UUID        `json:"id"`
+	SourceID    pgtype.UUID        `json:"source_id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	Name        string             `json:"name"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Safety      string             `json:"safety"`
+	InputSchema []byte             `json:"input_schema"`
+	Annotations []byte             `json:"annotations"`
+	LastSeenAt  pgtype.Timestamptz `json:"last_seen_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type TaskMessage struct {

@@ -18,5 +18,19 @@ export function localizeAuthError(error: unknown, fallback: string): string {
     return fallback;
   }
 
-  return AUTH_ERROR_MESSAGES[error.message.toLowerCase()] ?? fallback;
+  const message = error.message.toLowerCase();
+  const localized = AUTH_ERROR_MESSAGES[message];
+  if (localized) {
+    return localized;
+  }
+
+  if (
+    message.includes("failed to fetch") ||
+    message.includes("load failed") ||
+    message.includes("networkerror")
+  ) {
+    return "服务暂时不可用，请确认后端已启动";
+  }
+
+  return fallback;
 }

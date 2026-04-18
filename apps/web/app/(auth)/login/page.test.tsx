@@ -178,4 +178,19 @@ describe("LoginPage", () => {
       value: originalLocation,
     });
   });
+
+  it("shows a service error when the backend is unreachable", async () => {
+    mockLogin.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(screen.getByLabelText("邮箱"), "admin@local");
+    await user.type(screen.getByLabelText("密码"), "admin123");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    expect(
+      await screen.findByText("服务暂时不可用，请确认后端已启动"),
+    ).toBeInTheDocument();
+  });
 });

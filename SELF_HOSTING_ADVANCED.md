@@ -10,7 +10,7 @@ All configuration is done via environment variables. Copy `.env.example` as a st
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://multica:multica@localhost:5432/multica?sslmode=disable` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://multica:multica@localhost:22200/multica?sslmode=disable` |
 | `JWT_SECRET` | **Must change from default.** Secret key for signing JWT tokens. Use a long random string. | `openssl rand -hex 32` |
 | `FRONTEND_ORIGIN` | URL where the frontend is served (used for CORS) | `https://app.example.com` |
 
@@ -50,8 +50,8 @@ For file uploads and attachments, configure S3 and CloudFront:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8080` | Backend server port |
-| `FRONTEND_PORT` | `3000` | Frontend port |
+| `PORT` | `22201` | Backend server port |
+| `FRONTEND_PORT` | `22202` | Frontend port |
 | `CORS_ALLOWED_ORIGINS` | Value of `FRONTEND_ORIGIN` | Comma-separated list of allowed origins |
 | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 
@@ -61,8 +61,8 @@ These are configured on each user's machine, not on the server:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MULTICA_SERVER_URL` | `ws://localhost:8080/ws` | WebSocket URL for daemon → server connection |
-| `MULTICA_APP_URL` | `http://localhost:3000` | Frontend URL for CLI login flow |
+| `MULTICA_SERVER_URL` | `ws://localhost:22201/ws` | WebSocket URL for daemon → server connection |
+| `MULTICA_APP_URL` | `http://localhost:22202` | Frontend URL for CLI login flow |
 | `MULTICA_DAEMON_POLL_INTERVAL` | `3s` | How often the daemon polls for tasks |
 | `MULTICA_DAEMON_HEARTBEAT_INTERVAL` | `15s` | Heartbeat frequency |
 
@@ -112,7 +112,7 @@ make build
 DATABASE_URL="your-database-url" ./server/bin/migrate up
 
 # Start the backend server
-DATABASE_URL="your-database-url" PORT=8080 JWT_SECRET="your-secret" ./server/bin/server
+DATABASE_URL="your-database-url" PORT=22201 JWT_SECRET="your-secret" ./server/bin/server
 ```
 
 For the frontend:
@@ -123,7 +123,7 @@ pnpm build
 
 # Start the frontend (production mode)
 cd apps/web
-REMOTE_API_URL=http://localhost:8080 pnpm start
+REMOTE_API_URL=http://localhost:22201 pnpm start
 ```
 
 ## Reverse Proxy
@@ -134,11 +134,11 @@ In production, put a reverse proxy in front of both the backend and frontend to 
 
 ```
 app.example.com {
-    reverse_proxy localhost:3000
+    reverse_proxy localhost:22202
 }
 
 api.example.com {
-    reverse_proxy localhost:8080
+    reverse_proxy localhost:22201
 }
 ```
 
@@ -154,7 +154,7 @@ server {
     ssl_certificate_key /path/to/key.pem;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:22202;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -171,7 +171,7 @@ server {
     ssl_certificate_key /path/to/key.pem;
 
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:22201;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -180,7 +180,7 @@ server {
 
     # WebSocket support
     location /ws {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:22201;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

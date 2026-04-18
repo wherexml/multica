@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" width="960" height="720">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+  </style>
+  <defs>
+    <marker id="arrow-claude" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#5a5a5a"/>
+    </marker>
+    <filter id="shadow-soft">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#00000008"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="720" fill="#f8f6f3"/>
+
+  <!-- Title -->
+  <text x="480" y="45" text-anchor="middle" fill="#1a1a1a" font-size="22" font-weight="700">OptiONE Settings — 核心模块架构</text>
+  <text x="480" y="70" text-anchor="middle" fill="#6a6a6a" font-size="14">执行环境 · 数据源 · 技能包 · 所有任务 · 数字员工的 Agent</text>
+
+  <!-- Workspace scope box -->
+  <rect x="80" y="95" width="800" height="560" rx="10" fill="none" stroke="#b8b5b0" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="100" y="120" fill="#8a8a8a" font-size="12" font-weight="600">Workspace Scope</text>
+
+  <!-- ========== Nodes ========== -->
+
+  <!-- 执行环境 (Runtime) -->
+  <rect x="390" y="145" width="180" height="85" rx="12" fill="#f4e4c1" stroke="#4a4a4a" stroke-width="2.5" filter="url(#shadow-soft)"/>
+  <text x="480" y="180" text-anchor="middle" fill="#1a1a1a" font-size="16" font-weight="600">执行环境</text>
+  <text x="480" y="200" text-anchor="middle" fill="#5a5a5a" font-size="13">Runtime / Daemon</text>
+  <text x="480" y="218" text-anchor="middle" fill="#6a6a6a" font-size="12">local / cloud</text>
+
+  <!-- 技能包 (Skills) -->
+  <rect x="110" y="315" width="180" height="85" rx="12" fill="#e8e6e3" stroke="#4a4a4a" stroke-width="2.5" filter="url(#shadow-soft)"/>
+  <text x="200" y="350" text-anchor="middle" fill="#1a1a1a" font-size="16" font-weight="600">技能包</text>
+  <text x="200" y="370" text-anchor="middle" fill="#5a5a5a" font-size="13">Skill Packages</text>
+  <text x="200" y="388" text-anchor="middle" fill="#6a6a6a" font-size="12">SKILL.md + files</text>
+
+  <!-- 数字员工的 Agent (center, larger) -->
+  <rect x="375" y="300" width="210" height="110" rx="12" fill="#9dd4c7" stroke="#4a4a4a" stroke-width="3" filter="url(#shadow-soft)"/>
+  <text x="480" y="340" text-anchor="middle" fill="#1a1a1a" font-size="17" font-weight="700">数字员工的 Agent</text>
+  <text x="480" y="362" text-anchor="middle" fill="#3a5a50" font-size="13">Agent Core</text>
+  <text x="480" y="380" text-anchor="middle" fill="#4a6a60" font-size="12">Claude / Codex / OpenCode</text>
+  <text x="480" y="396" text-anchor="middle" fill="#4a6a60" font-size="12">max_concurrent_tasks</text>
+
+  <!-- 数据源 (Sources) -->
+  <rect x="670" y="315" width="180" height="85" rx="12" fill="#a8c5e6" stroke="#4a4a4a" stroke-width="2.5" filter="url(#shadow-soft)"/>
+  <text x="760" y="350" text-anchor="middle" fill="#1a1a1a" font-size="16" font-weight="600">数据源</text>
+  <text x="760" y="370" text-anchor="middle" fill="#5a5a5a" font-size="13">MCP Sources</text>
+  <text x="760" y="388" text-anchor="middle" fill="#6a6a6a" font-size="12">HTTP / SSE / stdio</text>
+
+  <!-- 所有任务 (Tasks) -->
+  <rect x="390" y="515" width="180" height="85" rx="12" fill="#e8d4d4" stroke="#4a4a4a" stroke-width="2.5" filter="url(#shadow-soft)"/>
+  <text x="480" y="550" text-anchor="middle" fill="#1a1a1a" font-size="16" font-weight="600">所有任务</text>
+  <text x="480" y="570" text-anchor="middle" fill="#5a5a5a" font-size="13">Agent Task Queue</text>
+  <text x="480" y="588" text-anchor="middle" fill="#6a6a6a" font-size="12">queued → running → done</text>
+
+  <!-- ========== Arrows ========== -->
+
+  <!-- Runtime -> Agent: runs on -->
+  <line x1="480" y1="230" x2="480" y2="300" stroke="#5a5a5a" stroke-width="2" marker-end="url(#arrow-claude)"/>
+  <rect x="452" y="256" width="56" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="480" y="269" text-anchor="middle" fill="#5a5a5a" font-size="13">runs on</text>
+
+  <!-- Skills -> Agent: loads -->
+  <line x1="290" y1="357" x2="375" y2="357" stroke="#5a5a5a" stroke-width="2" marker-end="url(#arrow-claude)"/>
+  <rect x="320" y="348" width="48" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="344" y="361" text-anchor="middle" fill="#5a5a5a" font-size="13">loads</text>
+
+  <!-- Data Sources -> Agent: MCP tools -->
+  <line x1="670" y1="357" x2="585" y2="357" stroke="#5a5a5a" stroke-width="2" marker-end="url(#arrow-claude)"/>
+  <rect x="603" y="348" width="72" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="639" y="361" text-anchor="middle" fill="#5a5a5a" font-size="13">MCP tools</text>
+
+  <!-- Agent -> Tasks: claims / executes -->
+  <line x1="480" y1="410" x2="480" y2="515" stroke="#5a5a5a" stroke-width="2" marker-end="url(#arrow-claude)"/>
+  <rect x="433" y="456" width="94" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="480" y="469" text-anchor="middle" fill="#5a5a5a" font-size="13">claims / executes</text>
+
+  <!-- Tasks -> Agent: assigned to (dashed) -->
+  <line x1="460" y1="515" x2="460" y2="410" stroke="#5a5a5a" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow-claude)"/>
+  <rect x="415" y="456" width="80" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="455" y="469" text-anchor="middle" fill="#5a5a5a" font-size="13">assigned to</text>
+
+  <!-- Data Sources -> Runtime: executes on (dashed, curved) -->
+  <path d="M 760 315 Q 760 220 570 187" fill="none" stroke="#5a5a5a" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrow-claude)"/>
+  <rect x="628" y="235" width="84" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="670" y="248" text-anchor="middle" fill="#6a6a6a" font-size="12">source runs on</text>
+
+  <!-- Skills -> Tasks: provides instructions (subtle curved) -->
+  <path d="M 200 400 Q 200 480 390 540" fill="none" stroke="#5a5a5a" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrow-claude)"/>
+  <rect x="250" y="465" width="110" height="18" rx="3" fill="#f8f6f3" opacity="0.95"/>
+  <text x="305" y="478" text-anchor="middle" fill="#6a6a6a" font-size="12">provides instructions</text>
+
+  <!-- Legend -->
+  <rect x="720" y="445" width="220" height="105" rx="8" fill="#ffffff" stroke="#4a4a4a" stroke-width="1.5" filter="url(#shadow-soft)"/>
+  <text x="735" y="470" fill="#1a1a1a" font-size="13" font-weight="600">Legend</text>
+  <line x1="735" y1="485" x2="765" y2="485" stroke="#5a5a5a" stroke-width="2"/>
+  <text x="775" y="490" fill="#6a6a6a" font-size="12">Primary flow</text>
+  <line x1="735" y1="505" x2="765" y2="505" stroke="#5a5a5a" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="775" y="510" fill="#6a6a6a" font-size="12">Assignment / feedback</text>
+  <line x1="735" y1="525" x2="765" y2="525" stroke="#5a5a5a" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="775" y="530" fill="#6a6a6a" font-size="12">Execution channel</text>
+</svg>

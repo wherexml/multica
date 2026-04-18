@@ -50,6 +50,7 @@ const ROUTE_ICONS: Record<string, string> = {
   "/projects": "FolderKanban",
   "/agents": "Bot",
   "/runtimes": "Monitor",
+  "/sources": "DatabaseZap",
   "/skills": "BookOpenText",
   "/settings": "Settings",
 };

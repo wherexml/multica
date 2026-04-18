@@ -16,7 +16,7 @@ SELECT
     i.issue_id,
     iss.status AS issue_status,
     i.created_at,
-    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '') AS domain,
+    COALESCE(NULLIF(i.details->>'domain', ''), NULLIF(dc.domain, ''), '')::text AS domain,
     COALESCE(
         NULLIF(i.details->>'risk_level', ''),
         NULLIF(dc.risk_level, ''),
@@ -25,7 +25,7 @@ SELECT
             WHEN i.severity = 'attention' THEN 'medium'
             ELSE 'low'
         END
-    ) AS risk_level
+    )::text AS risk_level
 FROM inbox_item i
 LEFT JOIN issue iss ON iss.id = i.issue_id
 LEFT JOIN decision_case dc ON dc.issue_id = i.issue_id AND dc.workspace_id = i.workspace_id

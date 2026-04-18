@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://multica:multica@localhost:5432/multica?sslmode=disable"
+		dbURL = "postgres://multica:multica@localhost:22200/multica?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, dbURL)
@@ -151,7 +151,10 @@ func newRequest(method, path string, body any) *http.Request {
 }
 
 func withURLParam(req *http.Request, key, value string) *http.Request {
-	rctx := chi.NewRouteContext()
+	rctx, _ := req.Context().Value(chi.RouteCtxKey).(*chi.Context)
+	if rctx == nil {
+		rctx = chi.NewRouteContext()
+	}
 	rctx.URLParams.Add(key, value)
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 }

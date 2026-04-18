@@ -25,6 +25,7 @@ import {
   ListTodo,
   Bot,
   Monitor,
+  DatabaseZap,
   ChevronDown,
   Settings,
   LogOut,
@@ -81,6 +82,7 @@ type SidebarNavKey =
   | "projectsCenter"
   | "agent"
   | "runtime"
+  | "source"
   | "skill"
   | "settings";
 
@@ -105,6 +107,7 @@ const workspaceNav: SidebarNavItem[] = [
 
 const configureNav: SidebarNavItem[] = [
   { href: "/runtimes", labelKey: "runtime", icon: Monitor },
+  { href: "/sources", labelKey: "source", icon: DatabaseZap },
   { href: "/skills", labelKey: "skill", icon: BookOpenText },
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];

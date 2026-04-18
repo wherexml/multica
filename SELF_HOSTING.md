@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/ins
 
 This automatically clones the repository, starts all services via Docker Compose, and installs the `multica` CLI.
 
-Once complete, open http://localhost:3000, log in with any email + verification code **`888888`**, then:
+Once complete, open http://localhost:22202, log in with any email + verification code **`888888`**, then:
 
 ```bash
 multica login          # Authenticate (opens browser)
@@ -51,14 +51,14 @@ make selfhost
 
 Once ready:
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8080
+- **Frontend:** http://localhost:22202
+- **Backend API:** http://localhost:22201
 
 > **Note:** If you prefer to run the Docker Compose steps manually, see [Manual Docker Compose Setup](#manual-docker-compose-setup) below.
 
 ### Step 2 — Log In
 
-Open http://localhost:3000 in your browser. Enter any email address and use verification code **`888888`** to log in.
+Open http://localhost:22202 in your browser. Enter any email address and use verification code **`888888`** to log in.
 
 > This master code works in all non-production environments (i.e. when `APP_ENV` is not set to `production`). For production, configure an email provider — see [Advanced Configuration](SELF_HOSTING_ADVANCED.md#email-required-for-authentication).
 
@@ -100,7 +100,7 @@ multica daemon status
 
 ### Step 4 — Verify & Start Using
 
-1. Open your workspace in the web app at http://localhost:3000
+1. Open your workspace in the web app at http://localhost:22202
 2. Navigate to **Settings → Runtimes** — you should see your machine listed
 3. Go to **Settings → Agents** and create a new agent
 4. Create an issue and assign it to your agent — it will pick up the task automatically
@@ -183,8 +183,8 @@ If you prefer configuring the CLI step by step instead of `multica setup`:
 multica config local
 
 # Or set URLs manually:
-# multica config set app_url http://localhost:3000
-# multica config set server_url http://localhost:8080
+# multica config set app_url http://localhost:22202
+# multica config set server_url http://localhost:22201
 
 # Login (opens browser)
 multica login

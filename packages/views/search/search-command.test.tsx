@@ -99,4 +99,20 @@ describe("SearchCommand", () => {
     expect(mockPush).toHaveBeenCalledWith("/settings");
     expect(useSearchStore.getState().open).toBe(false);
   });
+
+  it("finds and navigates to the sources page", async () => {
+    const user = userEvent.setup();
+    render(<SearchCommand />);
+
+    const input = screen.getByPlaceholderText("输入关键词进行搜索...");
+    await user.type(input, "数据源");
+
+    const sourcesItem = await screen.findByText(
+      (_, el) => el?.textContent === "数据源" && el?.getAttribute("cmdk-item") !== null,
+    );
+    await user.click(sourcesItem);
+
+    expect(mockPush).toHaveBeenCalledWith("/sources");
+    expect(useSearchStore.getState().open).toBe(false);
+  });
 });

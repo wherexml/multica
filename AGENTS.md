@@ -1,4 +1,6 @@
-本文件为 agent提供**快速工作参考**。详细内容按需查阅下方文档索引。
+# AGENTS.md — Agent 项目指南
+
+本文件为 agent 提供**快速工作参考**。详细内容按需查阅下方文档索引。
 
 ---
 
@@ -30,6 +32,19 @@ Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapsh
 ## 项目背景
 
 **Multica** — AI 原生任务管理平台（类 Linear，AI Agent 是第一等公民）。目标用户：2-10 人 AI 原生团队。
+
+## 团队成员映射
+
+| Git 用户名 | 中文名+英文名 |
+| --- | --- |
+| wherexml | 许茂林 (Steve) |
+| snowzh | SnowZh |
+| joevic9 | 刘容舟 (Joe) |
+| jjonakYu | 姚尚宇 (JJONAK) |
+| Kevin-Kim0102 | 金天韵 (kevin) |
+| hHuo07 | 宋媛焱 (Seren) |
+
+> 来源：[wherexml/optimax](https://github.com/wherexml/optimax) 仓库协作者
 
 ## 技术架构
 
@@ -89,25 +104,6 @@ Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapsh
 ## Agent 负责人
 
 多态：成员或 Agent。`assignee_type` + `assignee_id` 区分。Agent UI 有紫色背景 + 机器人图标。
-
----
-
-## 开发环境端口偏好
-
-**本地开发环境使用 Docker + OrbStack 部署，端口映射如下：**
-
-| 服务 | 容器端口 | 宿主机端口 | 访问地址 |
-| --- | --- | --- | --- |
-| 前端 (Next.js) | 3000 | **22202** | http://localhost:22202 |
-| 后端 (Go) | 8080 | **8080** | http://localhost:8080 |
-| PostgreSQL | 5432 | **22200** | postgres://localhost:22200 |
-
-**Docker 容器名称：**
-- `multica-frontend-1` — 前端
-- `multica-backend-1` — 后端
-- `multica-postgres-1` — 数据库
-
-**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:8080` 直接访问后端。前端通过 Next.js rewrites 代理 `/auth/*` 和 `/api/*` 到后端容器。
 
 ---
 
@@ -207,7 +203,35 @@ make check            # 全部：类型检查 + 单元测试 + Go 测试 + E2E
 | 加/改 API | api_contract.md |
 | 部署相关 | deployment.md → DEPLOY_CONTAINER.md |
 | CLI/Daemon 问题 | CLI_AND_DAEMON.md |
+| 查看本地功能增量（含 Sources / MCP） | local_modify.md |
 | 上游同步 | local_modify.md |
+
+---
+
+## 开发环境端口偏好
+
+**本地开发环境使用 Docker + OrbStack 部署，端口映射如下：**
+
+| 服务 | 容器端口 | 宿主机端口 | 访问地址 |
+| --- | --- | --- | --- |
+| 前端 (Next.js) | 3000 | **22202** | http://localhost:22202 |
+| 后端 (Go) | 8080 | **22201** | http://localhost:22201 |
+| PostgreSQL | 5432 | **22200** | postgres://localhost:22200 |
+
+**Docker 容器名称：**
+
+- `multica-frontend-1` — 前端
+- `multica-backend-1` — 后端
+- `multica-postgres-1` — 数据库
+
+**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:22201` 直接访问后端。
+
+**本地部署测试账号：**
+
+- Email: `admin@local`
+- Password: `admin123`
+
+修改代码后需要重新部署：`docker compose up -d --build frontend` 或 `make start`
 
 ---
 
@@ -229,11 +253,14 @@ git fetch upstream main && git stash && git merge upstream/main && git stash pop
 
 ## 本地修改记录
 
-> 详见 [local_modify.md](./local_modify.md)
-
-核心要点：
+> 详见 [local_modify.md](./local_modify.md)。核心要点：
 
 - 本地添加了**密码认证**（邮箱+密码登录/注册），上游用 Google OAuth + 验证码
 - 登录页 `apps/web/app/(auth)/login/page.tsx` 是本地完全重写，**不要恢复为上游版本**
 - 容器部署端口 222XX 范围，可能与上游不同
+- `Sources / MCP` 数据源层也是本地增量，细节请直接看 `local_modify.md`
 - 同步 `server/go.mod` 后需 `go get golang.org/x/crypto`
+
+### 本地部署
+
+本地通过 orb 的 docker 部署的 [部署地址：http://localhost:22202](http://localhost:22202/inbox)admin@local admin123 修改完了需要重新部署进行测试

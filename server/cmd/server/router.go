@@ -24,7 +24,7 @@ import (
 )
 
 var defaultOrigins = []string{
-	"http://localhost:3000", // Next.js dev
+	"http://localhost:22202", // Next.js dev
 	"http://localhost:5173", // electron-vite dev
 	"http://localhost:5174", // electron-vite dev (fallback port)
 }
@@ -103,10 +103,13 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 		r.Post("/heartbeat", h.DaemonHeartbeat)
 
 		r.Post("/runtimes/{runtimeId}/tasks/claim", h.ClaimTaskByRuntime)
+		r.Post("/runtimes/{runtimeId}/source-runs/claim", h.ClaimSourceRunByRuntime)
 		r.Get("/runtimes/{runtimeId}/tasks/pending", h.ListPendingTasksByRuntime)
 		r.Post("/runtimes/{runtimeId}/usage", h.ReportRuntimeUsage)
 		r.Post("/runtimes/{runtimeId}/ping/{pingId}/result", h.ReportPingResult)
 		r.Post("/runtimes/{runtimeId}/update/{updateId}/result", h.ReportUpdateResult)
+		r.Post("/source-runs/{runId}/complete", h.CompleteSourceRunByDaemon)
+		r.Post("/source-runs/{runId}/fail", h.FailSourceRunByDaemon)
 
 		r.Get("/tasks/{taskId}/status", h.GetTaskStatus)
 		r.Post("/tasks/{taskId}/start", h.StartTask)
@@ -310,6 +313,23 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 					r.Get("/", h.GetConnector)
 					r.Patch("/", h.UpdateConnector)
 					r.Post("/test", h.TestConnector)
+				})
+			})
+
+			r.Route("/api/sources", func(r chi.Router) {
+				r.Get("/", h.ListSources)
+				r.Post("/", h.CreateSource)
+				r.Route("/{sourceId}", func(r chi.Router) {
+					r.Get("/", h.GetSource)
+					r.Patch("/", h.UpdateSource)
+					r.Delete("/", h.DeleteSource)
+					r.Post("/test", h.TestSource)
+					r.Get("/tools", h.GetSourceTools)
+					r.Post("/tools/refresh", h.RefreshSourceTools)
+					r.Post("/tools/{toolName}/call", h.CallSourceTool)
+					r.Put("/auth", h.UpdateSourceAuth)
+					r.Delete("/auth", h.DeleteSourceAuth)
+					r.Get("/runs/{runId}", h.GetSourceRun)
 				})
 			})
 

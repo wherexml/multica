@@ -240,6 +240,7 @@ describe("AppSidebar", () => {
     expect(screen.getByText("项目中心")).toBeInTheDocument();
     expect(screen.getByText("数字员工")).toBeInTheDocument();
     expect(screen.getByText("执行环境")).toBeInTheDocument();
+    expect(screen.getByText("数据源")).toBeInTheDocument();
     expect(screen.getByText("技能包")).toBeInTheDocument();
     expect(
       screen.getByText((_, el) => el?.textContent === "设置" && el?.tagName === "SPAN"),
@@ -259,6 +260,7 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Projects")).toBeInTheDocument();
     expect(screen.getByText("Agents")).toBeInTheDocument();
     expect(screen.getByText("Runtimes")).toBeInTheDocument();
+    expect(screen.getByText("Sources")).toBeInTheDocument();
     expect(screen.getByText("Skills")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });

@@ -58,7 +58,7 @@ function initCore(
 export function CoreProvider({
   children,
   apiBaseUrl = "",
-  wsUrl = "ws://localhost:8080/ws",
+  wsUrl = "ws://localhost:22201/ws",
   storage = defaultStorage,
   onLogin,
   onLogout,

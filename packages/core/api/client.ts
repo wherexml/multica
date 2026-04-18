@@ -53,6 +53,17 @@ import type {
   CreatePinRequest,
   PinnedItemType,
   ReorderPinsRequest,
+  Source,
+  SourceType,
+  CreateSourceRequest,
+  UpdateSourceRequest,
+  ListSourcesResponse,
+  TestSourceResponse,
+  ListSourceToolsResponse,
+  SourceAuthState,
+  SourceRun,
+  SourceToolCallRequest,
+  UpdateSourceAuthRequest,
 } from "../types";
 import { type Logger, noopLogger } from "../logger";
 
@@ -483,6 +494,70 @@ export class ApiClient {
     updateId: string,
   ): Promise<RuntimeUpdate> {
     return this.fetch(`/api/runtimes/${runtimeId}/update/${updateId}`);
+  }
+
+  async listSources(params?: { workspace_id?: string; source_type?: SourceType }): Promise<ListSourcesResponse> {
+    const search = new URLSearchParams();
+    const wsId = params?.workspace_id ?? this.workspaceId;
+    if (wsId) search.set("workspace_id", wsId);
+    if (params?.source_type) search.set("source_type", params.source_type);
+    return this.fetch(`/api/sources?${search}`);
+  }
+
+  async getSource(sourceId: string): Promise<Source> {
+    return this.fetch(`/api/sources/${sourceId}`);
+  }
+
+  async createSource(data: CreateSourceRequest): Promise<Source> {
+    return this.fetch("/api/sources", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSource(sourceId: string, data: UpdateSourceRequest): Promise<Source> {
+    return this.fetch(`/api/sources/${sourceId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSource(sourceId: string): Promise<void> {
+    await this.fetch(`/api/sources/${sourceId}`, { method: "DELETE" });
+  }
+
+  async testSource(sourceId: string): Promise<TestSourceResponse> {
+    return this.fetch(`/api/sources/${sourceId}/test`, { method: "POST" });
+  }
+
+  async listSourceTools(sourceId: string): Promise<ListSourceToolsResponse> {
+    return this.fetch(`/api/sources/${sourceId}/tools`);
+  }
+
+  async refreshSourceTools(sourceId: string): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/tools/refresh`, { method: "POST" });
+  }
+
+  async callSourceTool(sourceId: string, toolName: string, data: SourceToolCallRequest): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/tools/${encodeURIComponent(toolName)}/call`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSourceAuth(sourceId: string, data: UpdateSourceAuthRequest): Promise<SourceAuthState> {
+    return this.fetch(`/api/sources/${sourceId}/auth`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async clearSourceAuth(sourceId: string): Promise<SourceAuthState> {
+    return this.fetch(`/api/sources/${sourceId}/auth`, { method: "DELETE" });
+  }
+
+  async getSourceRun(sourceId: string, runId: string): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/runs/${runId}`);
   }
 
   async listAgentTasks(agentId: string): Promise<AgentTask[]> {

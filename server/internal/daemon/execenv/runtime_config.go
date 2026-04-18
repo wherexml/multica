@@ -52,6 +52,9 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("- `multica workspace get --output json` — Get workspace details and context\n")
 	b.WriteString("- `multica workspace members [workspace-id] --output json` — List workspace members (user IDs, names, roles)\n")
 	b.WriteString("- `multica agent list --output json` — List agents in workspace\n")
+	b.WriteString("- `multica source list --output json` — List workspace data sources, including MCP sources and their runtime bindings\n")
+	b.WriteString("- `multica source get <source-id> --output json` — Get data source details, connection status, auth state, and latest run summary\n")
+	b.WriteString("- `multica source tools <source-id> --output json` — List tools exposed by a data source; only tools marked `read_only` are callable\n")
 	b.WriteString("- `multica repo checkout <url>` — Check out a repository into the working directory (creates a git worktree with a dedicated branch)\n")
 	b.WriteString("- `multica issue runs <issue-id> --output json` — List all execution runs for an issue (status, timestamps, errors)\n")
 	b.WriteString("- `multica issue run-messages <task-id> [--since <seq>] --output json` — List messages for a specific execution run (supports incremental fetch)\n")
@@ -64,6 +67,11 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("- `multica issue comment delete <comment-id>` — Delete a comment\n")
 	b.WriteString("- `multica issue status <id> <status>` — Update issue status (todo, in_progress, in_review, done, blocked)\n")
 	b.WriteString("- `multica issue update <id> [--title X] [--description X] [--priority X]` — Update issue fields\n\n")
+	b.WriteString("### Data Source Operations\n")
+	b.WriteString("- `multica source test <source-id> --wait --output json` — Test a source connection through its bound runtime\n")
+	b.WriteString("- `multica source refresh-tools <source-id> --wait --output json` — Refresh MCP tool discovery for a source\n")
+	b.WriteString("- `multica source call <source-id> <tool-name> --arguments '{\"key\":\"value\"}' --wait --output json` — Call a read-only data source tool and return its result\n")
+	b.WriteString("- Do not guess MCP configuration from local files. Always use `multica source ...` commands for data sources.\n\n")
 
 	// Inject available repositories section.
 	if len(ctx.Repos) > 0 {
@@ -91,6 +99,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("- You have full access to the `multica` CLI to look up issues, workspace info, members, agents, etc.\n")
 		b.WriteString("- If asked about issues, use `multica issue list --output json` or `multica issue get <id> --output json`\n")
 		b.WriteString("- If asked about the workspace, use `multica workspace get --output json`\n")
+		b.WriteString("- If asked about data sources or MCP, use `multica source list --output json`, `multica source get`, `multica source tools`, and `multica source test` or `multica source call`; do not search the working directory for MCP config\n")
 		b.WriteString("- If asked to perform actions (create issues, update status, etc.), use the appropriate CLI commands\n")
 		b.WriteString("- If the task requires code changes, use `multica repo checkout <url>` to get the code first\n")
 		b.WriteString("- Keep responses concise and direct\n\n")

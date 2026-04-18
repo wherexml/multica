@@ -262,7 +262,7 @@ setup_server() {
   info "Waiting for backend to be ready..."
   local ready=false
   for i in $(seq 1 45); do
-    if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    if curl -sf http://localhost:22201/health >/dev/null 2>&1; then
       ready=true
       break
     fi
@@ -285,10 +285,10 @@ configure_local() {
   info "Configuring CLI for local server..."
   multica config local 2>/dev/null || {
     # Fallback if config local doesn't exist in installed version
-    multica config set app_url http://localhost:3000 2>/dev/null || true
-    multica config set server_url http://localhost:8080 2>/dev/null || true
+    multica config set app_url http://localhost:22202 2>/dev/null || true
+    multica config set server_url http://localhost:22201 2>/dev/null || true
   }
-  ok "CLI configured for localhost (backend :8080, frontend :3000)"
+  ok "CLI configured for localhost (backend :22201, frontend :22202)"
 }
 
 # ---------------------------------------------------------------------------
@@ -353,12 +353,12 @@ run_local() {
   printf "${BOLD}${GREEN}  ✓ Multica is installed and running!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
-  printf "  ${BOLD}Frontend:${RESET}  http://localhost:3000\n"
-  printf "  ${BOLD}Backend:${RESET}   http://localhost:8080\n"
+  printf "  ${BOLD}Frontend:${RESET}  http://localhost:22202\n"
+  printf "  ${BOLD}Backend:${RESET}   http://localhost:22201\n"
   printf "  ${BOLD}Server at:${RESET} %s\n" "$INSTALL_DIR"
   printf "\n"
   printf "  ${BOLD}Next steps:${RESET}\n"
-  printf "  1. Open ${CYAN}http://localhost:3000${RESET} in your browser\n"
+  printf "  1. Open ${CYAN}http://localhost:22202${RESET} in your browser\n"
   printf "  2. Log in with any email + verification code: ${BOLD}888888${RESET}\n"
   printf "  3. Then run:\n"
   printf "\n"

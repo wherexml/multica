@@ -4,7 +4,7 @@ import { Cloud, Monitor } from "lucide-react";
 import type { Agent } from "@multica/core/types";
 import { AgentAvatar } from "../../common/agent-avatar";
 import { getAgentStatusLabel } from "./agent-meta";
-import { statusConfig } from "../config";
+import { getAgentPresenceConfig } from "../config";
 
 export function AgentListItem({
   agent,
@@ -15,7 +15,7 @@ export function AgentListItem({
   isSelected: boolean;
   onClick: () => void;
 }) {
-  const st = statusConfig[agent.status];
+  const st = getAgentPresenceConfig(agent.status);
   const isArchived = !!agent.archived_at;
   const statusLabel = getAgentStatusLabel(agent.status, isArchived);
   const summary = agent.description?.trim() || "暂未设置职责说明";

@@ -54,8 +54,8 @@ func TestNormalizeAPIBaseURL(t *testing.T) {
 	})
 
 	t.Run("keeps http base URL", func(t *testing.T) {
-		if got := normalizeAPIBaseURL("http://localhost:8080"); got != "http://localhost:8080" {
-			t.Fatalf("normalizeAPIBaseURL() = %q, want %q", got, "http://localhost:8080")
+		if got := normalizeAPIBaseURL("http://localhost:22201"); got != "http://localhost:22201" {
+			t.Fatalf("normalizeAPIBaseURL() = %q, want %q", got, "http://localhost:22201")
 		}
 	})
 

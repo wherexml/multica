@@ -355,11 +355,11 @@ function EmptyState({ agentName }: { agentName?: string }) {
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8">
       <Send className="size-8 text-muted-foreground/50" />
       <div className="text-center">
-        <h3 className="text-base font-semibold">Welcome to Multica</h3>
+        <h3 className="text-base font-semibold">开始对话</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           {agentName
-            ? `Chat with ${agentName} or ask anything`
-            : "Ask anything or tell Multica what you need"}
+            ? `和 ${agentName} 聊聊，或者直接提问。`
+            : "直接提问，或者告诉我你需要什么。"}
         </p>
       </div>
     </div>

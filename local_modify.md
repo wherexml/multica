@@ -67,7 +67,67 @@
 
 ---
 
-## 五、其他修改
+## 五、MCP 数据源（Sources）
+
+### 核心变化
+
+- 本地新增了独立的 `Sources` 产品层，用来承载 MCP 数据源配置，不再把这类配置继续塞进 `Runtimes`
+- 当前分工是：
+  - `Source` 负责“连哪个 MCP 服务”
+  - `Runtime` 负责“在哪台机器上跑”
+  - `Connector` 仍然负责业务系统读写和动作治理
+- 现在已经打通“真实只读链路”：
+  - 支持列表、详情、创建/编辑、真实连接测试、认证补全、工具发现、最近运行结果展示
+  - 只读工具可以执行；`write` / `unknown` 工具仍然只展示不放行
+
+### 第二期新增（真实读链路）
+
+- 本地又补了一轮 `Sources / MCP` 增量，把它从“配置壳子”推进到了“真实可用的只读 MCP 通道”
+- 新的边界仍然不变：
+  - `Source` 负责“连哪个 MCP 服务”
+  - `Runtime` / daemon 负责“在哪台机器上执行 MCP 会话”
+  - 写操作治理仍然没有并进这一轮，`write` / `unknown` 工具会展示但不放行
+- 这一轮新增了：
+  - 真实连接测试（不是只做本地配置校验）
+  - 真实工具发现与工具快照持久化
+  - Bearer / OAuth 手动补全与加密存储
+  - 只读工具执行与最近一次运行结果回显
+
+### 新增文件
+
+- **`server/migrations/050_sources.up.sql` / `050_sources.down.sql`** — 新增 `source` 表
+- **`server/pkg/db/queries/source.sql`** — `source` 的 CRUD 与测试结果持久化查询
+- **`server/internal/source/tester.go`** — 首期配置校验与连接测试逻辑
+- **`server/internal/source/auth.go` / `executor.go`** — 密钥加密、认证预览、真实 MCP 执行器（HTTP / SSE / stdio）
+- **`server/migrations/051_source_ops.up.sql` / `051_source_ops.down.sql`** — 新增 `source_secret` / `source_tool` / `source_run`
+- **`server/pkg/db/queries/source_secret.sql` / `source_tool.sql` / `source_run.sql`** — Sources 第二期查询
+- **`packages/core/types/source.ts`** — 前端 `Source` / `McpSourceConfig` 类型
+- **`packages/views/sources/components/*`** — 数据源列表、详情、连接弹窗等页面组件
+- **`apps/web/app/(dashboard)/sources/page.tsx`** — Web 端 `Sources` 页面入口
+
+### 修改文件
+
+- **`server/internal/handler/source.go`** — 新增 `/api/sources/*` handler
+- **`server/internal/handler/source_ops.go` / `source_daemon.go`** — Sources 第二期响应拼装、运行落库、daemon 领取/回写
+- **`server/cmd/server/router.go`** — 注册 `sources` 路由
+- **`server/internal/daemon/source_client.go` / `source_runs.go`** — daemon 领取并执行 source run
+- **`packages/core/api/client.ts`** — 添加 `sources` 相关 API client 方法
+- **`packages/core/sources/*`** — Sources query / mutation / cache shape 修正
+- **`packages/views/layout/app-sidebar.tsx`** — 侧边栏新增 `数据源` 入口
+- **`packages/views/search/search-command.tsx`** — 搜索入口支持 `数据源 / MCP / source`
+- **`packages/views/runtimes/components/runtime-list.tsx`** — 执行环境页增加“连接执行环境”入口说明
+
+### 同步理解时的注意点
+
+- 本地 `source` 是第一类对象，不是 `skill`，也不是 `connector` 的别名
+- 现在 `/api/sources/:id/test`、`/tools/refresh`、`/tools/:toolName/call` 都会创建 `source_run`，再由 daemon 在对应 runtime 所在机器上真正执行
+- `SOURCE_SECRET_KEY` 现在是必须项：Bearer / OAuth token 不再存回 `source.config`
+- 第二期默认只允许 `read_only` 工具真正执行；`write` 和 `unknown` 工具只展示，不执行
+- 如果后续同步上游，需要特别留意 `Sources` 和 `Runtimes` 的职责边界不要被冲掉
+
+---
+
+## 六、其他修改
 
 - **`server/cmd/server/router.go`** — 添加 `/auth/register` 路由
 - **`server/go.mod` / `server/go.sum`** — 添加 `golang.org/x/crypto` 依赖（密码哈希）
@@ -85,4 +145,5 @@
 1. **密码认证**：上游使用 Google OAuth，本地添加了密码认证。如果上游也添加了类似功能，需要合并两者的认证逻辑
 2. **容器部署**：上游 v0.1.24 也有了大量自部署优化（#724 一键部署），本地版本的端口范围（2200X）可能与上游不同
 3. **`pnpm-lock.yaml`**：下次同步时如果有冲突，建议用上游版本重新 `pnpm install --no-frozen-lockfile`
-4. **CLAUDE.md**：本地版本包含容器部署文档，已被 stash 保护
+4. **Sources / MCP**：本地增加了 `Sources` 产品层、`source` 表和 `/api/sources/*`，同步上游时需要特别检查这部分是否被覆盖或语义冲突
+5. **CLAUDE.md**：本地版本包含容器部署文档，已被 stash 保护
